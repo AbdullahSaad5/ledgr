@@ -7,6 +7,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final container = ProviderContainer();
   await container.read(notificationServiceProvider).init();
+  // Post any recurring transactions that came due while the app was closed.
+  await container.read(recurringRepositoryProvider).catchUp(DateTime.now());
   runApp(
     UncontrolledProviderScope(container: container, child: const LedgrApp()),
   );

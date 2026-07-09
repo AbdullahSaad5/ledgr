@@ -5,7 +5,10 @@ import 'package:ledgr/features/accounts/presentation/account_detail_screen.dart'
 import 'package:ledgr/features/accounts/presentation/accounts_screen.dart';
 import 'package:ledgr/features/budgets/presentation/budgets_screen.dart';
 import 'package:ledgr/features/categories/presentation/categories_screen.dart';
+import 'package:ledgr/features/debts/presentation/debts_screen.dart';
 import 'package:ledgr/features/home/presentation/home_screen.dart';
+import 'package:ledgr/features/recurring/presentation/recurring_screen.dart';
+import 'package:ledgr/features/recurring/presentation/upcoming_screen.dart';
 import 'package:ledgr/features/reports/presentation/reports_screen.dart';
 import 'package:ledgr/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:ledgr/features/transactions/presentation/search_screen.dart';
@@ -21,6 +24,9 @@ enum AppRoute {
   accountDetail('/accounts/:id', 'accountDetail'),
   categories('/categories', 'categories'),
   search('/search', 'search'),
+  recurring('/recurring', 'recurring'),
+  upcoming('/upcoming', 'upcoming'),
+  debts('/debts', 'debts'),
   addTransaction('/tx/new', 'addTransaction'),
   editTransaction('/tx/:id/edit', 'editTransaction');
 
@@ -105,6 +111,24 @@ GoRouter createRouter() {
         name: AppRoute.search.name,
         parentNavigatorKey: _rootKey,
         builder: (context, state) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.recurring.path,
+        name: AppRoute.recurring.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const RecurringScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.upcoming.path,
+        name: AppRoute.upcoming.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const UpcomingScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.debts.path,
+        name: AppRoute.debts.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const DebtsScreen(),
       ),
       GoRoute(
         path: AppRoute.addTransaction.path,

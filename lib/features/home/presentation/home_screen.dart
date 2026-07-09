@@ -28,7 +28,19 @@ class HomeScreen extends ConsumerWidget {
     final accountMap = ref.watch(accountMapProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.dashboardTitle)),
+      appBar: AppBar(
+        title: Text(l10n.dashboardTitle),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (v) => context.push('/$v'),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'debts', child: Text('Debts')),
+              PopupMenuItem(value: 'recurring', child: Text('Recurring')),
+              PopupMenuItem(value: 'upcoming', child: Text('Upcoming')),
+            ],
+          ),
+        ],
+      ),
       body: ListView(
         children: [
           Padding(

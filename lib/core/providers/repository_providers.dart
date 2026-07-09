@@ -9,6 +9,8 @@ import 'package:ledgr/features/accounts/data/account_repository.dart';
 import 'package:ledgr/features/budgets/data/budget_alert_service.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/categories/data/category_repository.dart';
+import 'package:ledgr/features/debts/data/debt_repository.dart';
+import 'package:ledgr/features/recurring/data/recurring_repository.dart';
 import 'package:ledgr/features/reports/data/reports_repository.dart';
 import 'package:ledgr/features/reports/domain/report_models.dart';
 import 'package:ledgr/features/tags/data/tag_repository.dart';
@@ -41,6 +43,34 @@ final reportsRepositoryProvider = Provider<ReportsRepository>(
     ref.watch(periodResolverProvider),
   ),
 );
+
+final recurringRepositoryProvider = Provider<RecurringRepository>(
+  (ref) => RecurringRepository(
+    ref.watch(databaseProvider),
+    ref.watch(transactionRepositoryProvider),
+  ),
+);
+
+final activeRulesProvider = StreamProvider<List<RecurringRule>>(
+  (ref) => ref.watch(recurringRepositoryProvider).watchActive(),
+);
+
+final upcomingProvider = FutureProvider<List<UpcomingItem>>(
+  (ref) => ref.watch(recurringRepositoryProvider).upcoming(DateTime.now()),
+);
+
+final debtRepositoryProvider = Provider<DebtRepository>(
+  (ref) => DebtRepository(
+    ref.watch(databaseProvider),
+    ref.watch(transactionRepositoryProvider),
+  ),
+);
+
+final debtsByDirectionProvider =
+    StreamProvider.family<List<DebtWithRemaining>, DebtDirection>(
+      (ref, direction) =>
+          ref.watch(debtRepositoryProvider).watchByDirection(direction),
+    );
 
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(),

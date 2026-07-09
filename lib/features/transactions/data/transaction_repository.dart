@@ -213,6 +213,8 @@ class TransactionRepository {
       payee: Value(d.payee),
       note: Value(d.note),
       date: Value(d.date),
+      recurringRuleId: Value(d.recurringRuleId),
+      debtId: Value(d.debtId),
       updatedAt: touch ? Value(DateTime.now()) : const Value.absent(),
     );
   }

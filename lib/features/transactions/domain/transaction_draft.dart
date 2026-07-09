@@ -14,6 +14,8 @@ class TransactionDraft {
     this.categoryId,
     this.payee,
     this.note,
+    this.recurringRuleId,
+    this.debtId,
   });
 
   final TxType type;
@@ -26,6 +28,8 @@ class TransactionDraft {
   final String? payee;
   final String? note;
   final DateTime date;
+  final int? recurringRuleId;
+  final int? debtId;
 
   bool get isTransfer => type == TxType.transfer;
 
