@@ -9,6 +9,7 @@ import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
@@ -119,6 +120,7 @@ class _OverviewTab extends ConsumerWidget {
             ],
           ),
         ),
+        const _DailyRhythm(),
         spend.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text('$e'),
@@ -205,7 +207,8 @@ class _OverviewTab extends ConsumerWidget {
                                   const SizedBox(width: Gaps.md),
                                   Expanded(
                                     child: Text(
-                                      categories[e.categoryId]?.name ?? 'Other',
+                                      categories[e.categoryId]?.name ??
+                                          'Uncategorized',
                                       style: text.bodyMedium,
                                     ),
                                   ),
@@ -442,6 +445,8 @@ class _TrendsTab extends ConsumerWidget {
                 ],
               ),
             ],
+            const _SpendingPace(),
+            const _CategoryShift(),
             // The month-on-month chart earns its place only once there is
             // more than one month to compare.
             if (active.length >= 2) ...[
@@ -836,6 +841,7 @@ class _NetWorthTab extends ConsumerWidget {
                 ),
               ),
             ),
+            const _AccountComposition(),
           ],
         );
       },
@@ -847,4 +853,486 @@ class _NetWorthTab extends ConsumerWidget {
 String _compactMinor(int minor) {
   final major = minor / 100;
   return NumberFormat.compact().format(major);
+}
+
+/// Spending per day of the selected period — shows the rhythm of the month
+/// (payday splurges, quiet weeks) at a glance.
+class _DailyRhythm extends ConsumerWidget {
+  const _DailyRhythm();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final txs = ref.watch(periodTransactionsProvider).valueOrNull ?? const [];
+    final period = ref.watch(selectedPeriodProvider);
+    final formatter = ref.watch(moneyFormatterProvider);
+    final currency = ref.watch(appSettingsProvider).homeCurrency;
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    final days = period.end.difference(period.start).inDays;
+    final perDay = List<int>.filled(days, 0);
+    for (final t in txs) {
+      if (t.type != TxType.expense) continue;
+      final i = t.date.difference(period.start).inDays;
+      if (i >= 0 && i < days) perDay[i] += t.amountMinor;
+    }
+    if (perDay.every((v) => v == 0)) return const SizedBox.shrink();
+    final maxVal = perDay.reduce((a, b) => a > b ? a : b).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Daily spending'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Gaps.page),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Gaps.lg,
+                Gaps.xl,
+                Gaps.lg,
+                Gaps.md,
+              ),
+              child: SizedBox(
+                height: 130,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxVal * 1.15,
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipColor: (_) => scheme.surfaceContainerHighest,
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          final day = period.start.add(Duration(days: group.x));
+                          final money = formatter.format(
+                            Money(minor: perDay[group.x], currency: currency),
+                          );
+                          return BarTooltipItem(
+                            '${DateFormat('d MMM').format(day)}\n$money',
+                            text.labelSmall!.copyWith(color: scheme.onSurface),
+                          );
+                        },
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            final i = value.toInt();
+                            // fl_chart labels every bar group; gate manually
+                            // to weekly ticks.
+                            if (i < 0 || i >= days || i % 7 != 0) {
+                              return const SizedBox.shrink();
+                            }
+                            final day = period.start.add(Duration(days: i));
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '${day.day}',
+                                style: text.labelSmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barGroups: [
+                      for (var i = 0; i < days; i++)
+                        BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: perDay[i].toDouble(),
+                              color: perDay[i] == maxVal.toInt()
+                                  ? scheme.expense
+                                  : scheme.primary.withValues(alpha: 0.75),
+                              width: 5,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Cumulative spend this period vs last — are you burning faster or slower
+/// than last month?
+class _SpendingPace extends ConsumerWidget {
+  const _SpendingPace();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final txs = ref.watch(periodTransactionsProvider).valueOrNull ?? const [];
+    final prevTxs =
+        ref.watch(previousPeriodTransactionsProvider).valueOrNull ?? const [];
+    final period = ref.watch(selectedPeriodProvider);
+    final prevPeriod = ref.watch(previousPeriodProvider);
+    final formatter = ref.watch(moneyFormatterProvider);
+    final currency = ref.watch(appSettingsProvider).homeCurrency;
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    List<int> cumulative(List<Transaction> list, Period p, int days) {
+      final perDay = List<int>.filled(days, 0);
+      for (final t in list) {
+        if (t.type != TxType.expense) continue;
+        final i = t.date.difference(p.start).inDays;
+        if (i >= 0 && i < days) perDay[i] += t.amountMinor;
+      }
+      var running = 0;
+      return [for (final v in perDay) running += v];
+    }
+
+    final days = period.end.difference(period.start).inDays;
+    final prevDays = prevPeriod.end.difference(prevPeriod.start).inDays;
+    final now = DateTime.now();
+    final elapsed = now.isAfter(period.end)
+        ? days
+        : (now.difference(period.start).inDays + 1).clamp(1, days);
+
+    final thisCum = cumulative(txs, period, days).sublist(0, elapsed);
+    final prevCum = cumulative(prevTxs, prevPeriod, prevDays);
+    if (prevCum.isEmpty || prevCum.last == 0 || thisCum.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final maxVal = [
+      ...thisCum,
+      ...prevCum,
+    ].reduce((a, b) => a > b ? a : b).toDouble();
+    final samePoint = elapsed.clamp(1, prevDays) - 1;
+    final ahead = thisCum.last > prevCum[samePoint];
+    final nowLabel = formatter.format(
+      Money(minor: thisCum.last, currency: currency),
+    );
+    final thenLabel = formatter.format(
+      Money(minor: prevCum[samePoint], currency: currency),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: Gaps.sm),
+        const SectionHeader(title: 'Spending pace'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Gaps.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ahead
+                      ? 'Spending faster than last month'
+                      : 'Spending slower than last month',
+                  style: text.titleSmall?.copyWith(
+                    color: ahead ? scheme.expense : scheme.income,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Day $elapsed: $nowLabel now vs $thenLabel then',
+                  style: text.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: Gaps.lg),
+                SizedBox(
+                  height: 150,
+                  child: LineChart(
+                    LineChartData(
+                      maxY: maxVal * 1.1,
+                      lineTouchData: const LineTouchData(enabled: false),
+                      titlesData: const FlTitlesData(show: false),
+                      gridData: const FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: [
+                            for (var i = 0; i < prevCum.length; i++)
+                              FlSpot(i.toDouble(), prevCum[i].toDouble()),
+                          ],
+                          isCurved: false,
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          barWidth: 2,
+                          dashArray: [5, 5],
+                          dotData: const FlDotData(show: false),
+                        ),
+                        LineChartBarData(
+                          spots: [
+                            for (var i = 0; i < thisCum.length; i++)
+                              FlSpot(i.toDouble(), thisCum[i].toDouble()),
+                          ],
+                          isCurved: false,
+                          color: scheme.primary,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: false),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: Gaps.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(width: 14, height: 3, color: scheme.primary),
+                    const SizedBox(width: 5),
+                    Text('This month', style: text.labelSmall),
+                    const SizedBox(width: Gaps.lg),
+                    Container(
+                      width: 14,
+                      height: 2,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 5),
+                    Text('Last month', style: text.labelSmall),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Top categories this period with their movement vs last period.
+class _CategoryShift extends ConsumerWidget {
+  const _CategoryShift();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final spend = ref.watch(spendByCategoryProvider).valueOrNull ?? const [];
+    final prev =
+        ref.watch(previousSpendByCategoryProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoryMapProvider);
+    final formatter = ref.watch(moneyFormatterProvider);
+    final currency = ref.watch(appSettingsProvider).homeCurrency;
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    if (spend.isEmpty || prev.isEmpty) return const SizedBox.shrink();
+    final prevByCat = {for (final e in prev) e.categoryId: e.totalMinor};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: Gaps.sm),
+        const SectionHeader(title: 'Vs last month'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Gaps.lg,
+              vertical: Gaps.sm,
+            ),
+            child: Column(
+              children: [
+                for (final e in spend.take(5))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(
+                      children: [
+                        IconBadge(
+                          icon: AppIcons.resolve(
+                            categories[e.categoryId]?.icon ?? 'category',
+                          ),
+                          color: Color(
+                            categories[e.categoryId]?.color ?? 0xFF9E9E9E,
+                          ),
+                          size: 32,
+                          iconSize: 15,
+                        ),
+                        const SizedBox(width: Gaps.md),
+                        Expanded(
+                          child: Text(
+                            categories[e.categoryId]?.name ?? 'Uncategorized',
+                            style: text.bodyMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _delta(
+                          context,
+                          e.totalMinor,
+                          prevByCat[e.categoryId] ?? 0,
+                          formatter,
+                          currency,
+                          scheme,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _delta(
+    BuildContext context,
+    int now,
+    int before,
+    MoneyFormatter formatter,
+    String currency,
+    ColorScheme scheme,
+  ) {
+    final text = Theme.of(context).textTheme;
+    final diff = now - before;
+    final up = diff > 0;
+    final color = diff == 0
+        ? scheme.onSurfaceVariant
+        : up
+        ? scheme.expense
+        : scheme.income;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          formatter.format(Money(minor: now, currency: currency)),
+          style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        Row(
+          children: [
+            if (diff != 0)
+              Icon(
+                up ? LucideIcons.arrowUpRight : LucideIcons.arrowDownLeft,
+                size: 11,
+                color: color,
+              ),
+            Text(
+              diff == 0
+                  ? 'same as last month'
+                  : formatter.format(
+                      Money(minor: diff.abs(), currency: currency),
+                    ),
+              style: text.labelSmall?.copyWith(color: color),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Where the net worth lives: per-account share bars.
+class _AccountComposition extends ConsumerWidget {
+  const _AccountComposition();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(activeAccountsProvider).valueOrNull ?? const [];
+    final formatter = ref.watch(moneyFormatterProvider);
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    final included = accounts
+        .where((e) => e.account.includeInNetWorth)
+        .toList();
+    if (included.length < 2) return const SizedBox.shrink();
+    final maxAbs = included.fold<int>(
+      1,
+      (m, e) => e.balanceMinor.abs() > m ? e.balanceMinor.abs() : m,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: Gaps.sm),
+        const SectionHeader(title: 'Where it lives'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(Gaps.lg),
+            child: Column(
+              children: [
+                for (final e in included)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        IconBadge(
+                          icon: AppIcons.resolve(e.account.icon),
+                          color: Color(e.account.color),
+                          size: 32,
+                          iconSize: 15,
+                        ),
+                        const SizedBox(width: Gaps.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      e.account.name,
+                                      style: text.bodySmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  AmountText(
+                                    Money(
+                                      minor: e.balanceMinor,
+                                      currency: e.account.currency,
+                                    ),
+                                    formatter: formatter,
+                                    tone: e.balanceMinor < 0
+                                        ? AmountTone.expense
+                                        : AmountTone.neutral,
+                                    style: text.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(99),
+                                child: LinearProgressIndicator(
+                                  value: e.balanceMinor.abs() / maxAbs,
+                                  minHeight: 5,
+                                  backgroundColor:
+                                      scheme.surfaceContainerHighest,
+                                  color: e.balanceMinor < 0
+                                      ? scheme.expense
+                                      : Color(e.account.color),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

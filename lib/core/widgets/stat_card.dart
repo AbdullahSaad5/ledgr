@@ -54,11 +54,17 @@ class StatCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      AmountText(
-                        item.money,
-                        formatter: formatter,
-                        tone: item.tone,
-                        style: text.titleSmall,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: AmountText(
+                            item.money,
+                            formatter: formatter,
+                            tone: item.tone,
+                            style: text.titleSmall,
+                          ),
+                        ),
                       ),
                     ],
                   ),

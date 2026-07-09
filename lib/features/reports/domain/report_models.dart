@@ -1,6 +1,10 @@
 /// Total expense attributed to a (top-level) category over a period.
 class CategorySpend {
   const CategorySpend({required this.categoryId, required this.totalMinor});
+
+  /// Sentinel id for spending with no category.
+  static const uncategorizedId = -1;
+
   final int categoryId;
   final int totalMinor;
 }

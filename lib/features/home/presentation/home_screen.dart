@@ -243,10 +243,13 @@ class _HeroPanel extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: Gaps.sm),
-          AnimatedAmount(
-            Money(minor: netWorth, currency: currency),
-            formatter: formatter,
-            style: text.displaySmall?.copyWith(color: scheme.onHero),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: AnimatedAmount(
+              Money(minor: netWorth, currency: currency),
+              formatter: formatter,
+              style: text.displaySmall?.copyWith(color: scheme.onHero),
+            ),
           ),
           const SizedBox(height: Gaps.xl),
           if (overall != null)
@@ -259,26 +262,30 @@ class _HeroPanel extends ConsumerWidget {
           else
             Row(
               children: [
-                _HeroStat(
-                  label: 'Spent',
-                  icon: LucideIcons.arrowDownLeft,
-                  iconColor: const Color(0xFFFF9E8F),
-                  money: Money(
-                    minor: totals?.expenseMinor ?? 0,
-                    currency: currency,
+                Expanded(
+                  child: _HeroStat(
+                    label: 'Spent',
+                    icon: LucideIcons.arrowDownLeft,
+                    iconColor: const Color(0xFFFF9E8F),
+                    money: Money(
+                      minor: totals?.expenseMinor ?? 0,
+                      currency: currency,
+                    ),
+                    formatter: formatter,
                   ),
-                  formatter: formatter,
                 ),
-                const SizedBox(width: Gaps.xxl),
-                _HeroStat(
-                  label: 'Received',
-                  icon: LucideIcons.arrowUpRight,
-                  iconColor: const Color(0xFF7DE8AE),
-                  money: Money(
-                    minor: totals?.incomeMinor ?? 0,
-                    currency: currency,
+                const SizedBox(width: Gaps.lg),
+                Expanded(
+                  child: _HeroStat(
+                    label: 'Received',
+                    icon: LucideIcons.arrowUpRight,
+                    iconColor: const Color(0xFF7DE8AE),
+                    money: Money(
+                      minor: totals?.incomeMinor ?? 0,
+                      currency: currency,
+                    ),
+                    formatter: formatter,
                   ),
-                  formatter: formatter,
                 ),
               ],
             ),
@@ -317,19 +324,24 @@ class _HeroStat extends StatelessWidget {
           background: Colors.white.withValues(alpha: 0.10),
         ),
         const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: text.labelSmall?.copyWith(color: scheme.onHeroMuted),
-            ),
-            AmountText(
-              money,
-              formatter: formatter,
-              style: text.titleMedium?.copyWith(color: scheme.onHero),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: text.labelSmall?.copyWith(color: scheme.onHeroMuted),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: AmountText(
+                  money,
+                  formatter: formatter,
+                  style: text.titleMedium?.copyWith(color: scheme.onHero),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -550,7 +562,8 @@ class _SpendingSnapshot extends ConsumerWidget {
                               const SizedBox(width: Gaps.sm),
                               Expanded(
                                 child: Text(
-                                  categories[s.categoryId]?.name ?? 'Other',
+                                  categories[s.categoryId]?.name ??
+                                      'Uncategorized',
                                   style: text.bodyMedium,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

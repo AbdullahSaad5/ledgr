@@ -112,26 +112,31 @@ class AccountDetailScreen extends ConsumerWidget {
                         background: Colors.white.withValues(alpha: 0.12),
                       ),
                       const SizedBox(width: Gaps.lg),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Balance',
-                            style: text.labelMedium?.copyWith(
-                              color: scheme.onHeroMuted,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Balance',
+                              style: text.labelMedium?.copyWith(
+                                color: scheme.onHeroMuted,
+                              ),
                             ),
-                          ),
-                          AnimatedAmount(
-                            Money(
-                              minor: balanceMinor,
-                              currency: account.currency,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: AnimatedAmount(
+                                Money(
+                                  minor: balanceMinor,
+                                  currency: account.currency,
+                                ),
+                                formatter: formatter,
+                                style: text.headlineMedium?.copyWith(
+                                  color: scheme.onHero,
+                                ),
+                              ),
                             ),
-                            formatter: formatter,
-                            style: text.headlineMedium?.copyWith(
-                              color: scheme.onHero,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),

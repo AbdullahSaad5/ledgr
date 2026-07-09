@@ -157,6 +157,28 @@ final selectedPeriodProvider = StateProvider<Period>(
   (ref) => ref.watch(periodResolverProvider).periodContaining(DateTime.now()),
 );
 
+/// The period immediately before the selected one (for comparisons).
+final previousPeriodProvider = Provider<Period>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(periodResolverProvider).previous(period);
+});
+
+/// Transactions of the previous period (spending-pace comparisons).
+final previousPeriodTransactionsProvider = StreamProvider<List<Transaction>>((
+  ref,
+) {
+  final period = ref.watch(previousPeriodProvider);
+  return ref.watch(transactionRepositoryProvider).watchInPeriod(period);
+});
+
+/// Category spend of the previous period (category-shift comparisons).
+final previousSpendByCategoryProvider = StreamProvider<List<CategorySpend>>((
+  ref,
+) {
+  final period = ref.watch(previousPeriodProvider);
+  return ref.watch(reportsRepositoryProvider).watchSpendByCategory(period);
+});
+
 /// Transactions inside [selectedPeriodProvider], newest first.
 final periodTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
   final period = ref.watch(selectedPeriodProvider);

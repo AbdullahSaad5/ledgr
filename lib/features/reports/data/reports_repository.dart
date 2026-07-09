@@ -50,7 +50,7 @@ class ReportsRepository {
     final rows =
         await (_db.selectOnly(_db.transactions)
               ..addColumns([catId, amount])
-              ..where(_expenseIn(period) & catId.isNotNull())
+              ..where(_expenseIn(period))
               ..groupBy([catId]))
             .get();
 
@@ -60,7 +60,9 @@ class ReportsRepository {
 
     final totals = <int, int>{};
     for (final r in rows) {
-      final id = r.read(catId)!;
+      // Uncategorized spending gets its own bucket (id -1) so the
+      // breakdown always sums to what was actually spent.
+      final id = r.read(catId) ?? CategorySpend.uncategorizedId;
       final top = parentOf[id] ?? id;
       totals[top] = (totals[top] ?? 0) + (r.read(amount) ?? 0);
     }

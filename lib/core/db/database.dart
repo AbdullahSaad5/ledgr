@@ -147,6 +147,23 @@ class AppDatabase extends _$AppDatabase {
     ).watchSingle().map((row) => row.read<int>('balance'));
   }
 
+  /// Reactive active accounts joined with their derived balances in ONE
+  /// query, so a change to either table re-emits (two combined streams
+  /// previously deadlocked on asyncExpand's completion semantics).
+  Stream<List<(Account, int)>> watchActiveAccountsWithBalances() {
+    final sql = _balanceSelect(
+      single: false,
+    ).replaceFirst('SELECT accounts.id AS account_id,', 'SELECT accounts.*,');
+    return customSelect(
+      '$sql AND accounts.archived = 0 ORDER BY accounts.position',
+      readsFrom: {accounts, transactions},
+    ).watch().map(
+      (rows) => [
+        for (final r in rows) (accounts.map(r.data), r.read<int>('balance')),
+      ],
+    );
+  }
+
   /// Reactive balances for every non-archived account, keyed by account id.
   Stream<Map<int, int>> watchAllBalances() {
     return customSelect(

@@ -82,12 +82,15 @@ class TransactionDetailSheet extends ConsumerWidget {
             children: [
               IconBadge(icon: icon, color: tint, size: 56, iconSize: 24),
               const SizedBox(height: Gaps.md),
-              AmountText(
-                tx.amount,
-                formatter: formatter,
-                tone: tone,
-                showPlus: tx.type == TxType.income,
-                style: text.headlineMedium,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: AmountText(
+                  tx.amount,
+                  formatter: formatter,
+                  tone: tone,
+                  showPlus: tx.type == TxType.income,
+                  style: text.headlineMedium,
+                ),
               ),
               Text(
                 title,
@@ -182,12 +185,7 @@ class TransactionDetailSheet extends ConsumerWidget {
     );
   }
 
-  Widget _row(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _row(BuildContext context, IconData icon, String label, String value) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     return Padding(

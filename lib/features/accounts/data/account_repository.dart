@@ -16,21 +16,16 @@ class AccountRepository {
 
   final AppDatabase _db;
 
-  /// Non-archived, non-deleted accounts ordered by position, each with balance.
+  /// Non-archived, non-deleted accounts ordered by position, each with
+  /// balance — one reactive query so both account and transaction changes
+  /// re-emit immediately.
   Stream<List<AccountWithBalance>> watchActiveWithBalances() {
-    final accounts = _activeQuery().watch();
-    return _db.watchAllBalances().asyncExpand((balances) {
-      return accounts.map(
-        (rows) => rows
-            .map(
-              (a) => AccountWithBalance(
-                a,
-                balances[a.id] ?? a.openingBalanceMinor,
-              ),
-            )
-            .toList(),
-      );
-    });
+    return _db.watchActiveAccountsWithBalances().map(
+      (rows) => [
+        for (final (account, balance) in rows)
+          AccountWithBalance(account, balance),
+      ],
+    );
   }
 
   Stream<List<Account>> watchActive() => _activeQuery().watch();

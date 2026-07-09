@@ -48,6 +48,34 @@ void main() {
     });
   });
 
+  group('balances (realtime)', () {
+    test('watchActiveWithBalances re-emits after a transaction lands',
+        () async {
+      final id = await makeAccount('Cash', opening: 100000);
+      final stream = repo.watchActiveWithBalances();
+      final first = await stream.first;
+      expect(first.single.balanceMinor, 100000);
+
+      // Regression: the old two-stream combine (asyncExpand over an
+      // infinite inner stream) swallowed every balance update after the
+      // first emission.
+      final next = expectLater(
+        stream.map((rows) => rows.single.balanceMinor),
+        emitsThrough(85000),
+      );
+      await db.into(db.transactions).insert(
+            TransactionsCompanion.insert(
+              type: TxType.expense,
+              amountMinor: 15000,
+              currency: 'PKR',
+              accountId: id,
+              date: DateTime(2026, 7, 5),
+            ),
+          );
+      await next;
+    });
+  });
+
   group('archive (never hard-delete)', () {
     test('archived accounts drop out of the active list but survive', () async {
       final id = await makeAccount('A');
