@@ -9,6 +9,7 @@ import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Create or edit a budget (overall or per category), as a full screen.
 /// (Kept as `BudgetFormSheet` with a `show` entry point so call sites are
@@ -131,14 +132,62 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              IconBadge(
-                                icon: AppIcons.resolve(c.icon),
-                                color: Color(c.color),
-                                size: 40,
-                                iconSize: 18,
-                                background: _categoryId == c.id
-                                    ? Color(c.color).withValues(alpha: 0.32)
-                                    : Color(c.color).withValues(alpha: 0.10),
+                              // Selected = filled badge + ring + check dot.
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: ShapeDecoration(
+                                      shape: RoundedSuperellipseBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        side: _categoryId == c.id
+                                            ? BorderSide(
+                                                color: Color(c.color),
+                                                width: 2,
+                                              )
+                                            : BorderSide.none,
+                                      ),
+                                    ),
+                                    child: _categoryId == c.id
+                                        ? IconBadge.filled(
+                                            icon: AppIcons.resolve(c.icon),
+                                            fill: Color(c.color),
+                                            onColor: Colors.white,
+                                            size: 40,
+                                            iconSize: 18,
+                                          )
+                                        : IconBadge(
+                                            icon: AppIcons.resolve(c.icon),
+                                            color: Color(c.color),
+                                            size: 40,
+                                            iconSize: 18,
+                                          ),
+                                  ),
+                                  if (_categoryId == c.id)
+                                    Positioned(
+                                      right: -4,
+                                      top: -4,
+                                      child: Container(
+                                        width: 18,
+                                        height: 18,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: scheme.primary,
+                                          border: Border.all(
+                                            color: scheme.surface,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          LucideIcons.check,
+                                          size: 11,
+                                          color: scheme.onPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                               const SizedBox(height: 4),
                               Text(

@@ -191,7 +191,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Pick the destination account.
-    await tester.tap(find.text('To…'));
+    await tester.tap(find.text('To'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bank').last);
     await tester.pumpAndSettle();

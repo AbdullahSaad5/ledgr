@@ -37,7 +37,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   int? _categoryId;
   DateTime _date = DateTime.now();
   final Set<int> _tagIds = {};
-  List<String> _payeeSuggestions = const [];
   bool _loaded = false;
 
   bool get _isEditing => widget.transactionId != null;
@@ -64,29 +63,48 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     }
   }
 
-  Future<void> _updatePayeeSuggestions(String query) async {
-    final repo = ref.read(transactionRepositoryProvider);
-    final suggestions = await repo.payeeSuggestions(query);
-    if (mounted) {
-      setState(
-        () => _payeeSuggestions = suggestions
-            .where((s) => s != _payee.text)
-            .toList(),
-      );
+  String _accountName(List<Account> accounts, int? id) {
+    for (final a in accounts) {
+      if (a.id == id) return a.name;
     }
+    return 'Choose';
   }
 
-  Future<void> _pickPayee(String payee) async {
-    _payee.text = payee;
-    setState(() => _payeeSuggestions = const []);
-    if (_type != TxType.transfer && _categoryId == null) {
+  Future<void> _editPayee() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _PayeeSheet(initial: _payee.text),
+    );
+    if (result == null) return;
+    _payee.text = result;
+    setState(() {});
+    if (result.isNotEmpty && _type != TxType.transfer && _categoryId == null) {
       final category = await ref
           .read(transactionRepositoryProvider)
-          .commonCategoryForPayee(payee);
+          .commonCategoryForPayee(result);
       if (category != null && mounted) {
         setState(() => _categoryId = category);
       }
     }
+  }
+
+  Future<void> _editTags() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TagsSheet(
+        selected: _tagIds,
+        onToggle: (id, on) => setState(() {
+          if (on) {
+            _tagIds.add(id);
+          } else {
+            _tagIds.remove(id);
+          }
+        }),
+      ),
+    );
+    setState(() {});
   }
 
   void _hydrate(Transaction tx) {
@@ -226,88 +244,105 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _MetaPill(
+                            icon: LucideIcons.store,
+                            label: _payee.text.trim().isEmpty
+                                ? 'Add payee'
+                                : _payee.text.trim(),
+                            active: _payee.text.trim().isNotEmpty,
+                            onTap: _editPayee,
+                          ),
+                          const SizedBox(width: 8),
+                          _MetaPill(
+                            icon: LucideIcons.tag,
+                            label: _tagIds.isEmpty
+                                ? 'Tags'
+                                : 'Tags (${_tagIds.length})',
+                            active: _tagIds.isNotEmpty,
+                            onTap: _editTags,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-            // Everything the transaction needs, in one aligned card.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-              child: Card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                      child: _ChipsRow(
-                        type: _type,
-                        accounts: accounts,
-                        accountId: _accountId,
-                        toAccountId: _toAccountId,
-                        categoryId: _categoryId,
-                        date: _date,
-                        onPickAccount: (id) => setState(() => _accountId = id),
-                        onPickToAccount: (id) =>
-                            setState(() => _toAccountId = id),
-                        onPickCategory: (id) =>
-                            setState(() => _categoryId = id),
-                        onPickDate: (d) => setState(() => _date = d),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _SelectorTile(
+                      icon: LucideIcons.wallet,
+                      label: _type == TxType.transfer ? 'From' : 'Account',
+                      value: _accountName(accounts, _accountId),
+                      onTap: () async {
+                        final id = await _pickAccount(context, accounts);
+                        if (id != null) setState(() => _accountId = id);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_type == TxType.transfer)
+                    Expanded(
+                      child: _SelectorTile(
+                        icon: LucideIcons.arrowRight,
+                        label: 'To',
+                        value: _toAccountId == null
+                            ? 'Choose'
+                            : _accountName(accounts, _toAccountId),
+                        onTap: () async {
+                          final id = await _pickAccount(
+                            context,
+                            accounts.where((a) => a.id != _accountId).toList(),
+                          );
+                          if (id != null) setState(() => _toAccountId = id);
+                        },
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: _SelectorTile(
+                        icon: LucideIcons.shapes,
+                        label: 'Category',
+                        value: _categoryId == null
+                            ? 'Choose'
+                            : ref
+                                      .watch(categoryMapProvider)[_categoryId]
+                                      ?.name ??
+                                  'Choose',
+                        onTap: () async {
+                          final kind = _type == TxType.income
+                              ? CategoryKind.income
+                              : CategoryKind.expense;
+                          final id = await _pickCategory(context, ref, kind);
+                          if (id != null) setState(() => _categoryId = id);
+                        },
                       ),
                     ),
-                    if (_payeeSuggestions.isNotEmpty)
-                      SizedBox(
-                        height: 40,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          children: [
-                            for (final s in _payeeSuggestions)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ActionChip(
-                                  label: Text(s),
-                                  onPressed: () => _pickPayee(s),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: TextField(
-                        controller: _payee,
-                        onChanged: _updatePayeeSuggestions,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          filled: false,
-                          icon: Icon(
-                            LucideIcons.store,
-                            size: 18,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          hintText: 'Payee (optional)',
-                          hintStyle: TextStyle(color: scheme.onSurfaceVariant),
-                          border: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                        ),
-                      ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SelectorTile(
+                      icon: LucideIcons.calendar,
+                      label: 'Date',
+                      value: _dateLabel(_date),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _date,
+                          firstDate: DateTime(2015),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) setState(() => _date = picked);
+                      },
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      child: _TagRow(
-                        selected: _tagIds,
-                        onToggle: (id, on) => setState(() {
-                          if (on) {
-                            _tagIds.add(id);
-                          } else {
-                            _tagIds.remove(id);
-                          }
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             // While the system keyboard is up (payee/tag entry), the calc
@@ -383,89 +418,6 @@ class _SaveButton extends StatelessWidget {
   }
 }
 
-class _TagRow extends ConsumerWidget {
-  const _TagRow({required this.selected, required this.onToggle});
-
-  final Set<int> selected;
-  // A (tagId, isSelected) callback reads naturally positionally.
-  // ignore: avoid_positional_boolean_parameters
-  final void Function(int id, bool on) onToggle;
-
-  Future<void> _createTag(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          0,
-          24,
-          MediaQuery.viewInsetsOf(sheetContext).bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'New tag',
-              style: Theme.of(sheetContext).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: 'Tag name'),
-              onSubmitted: (v) => Navigator.of(sheetContext).pop(v.trim()),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                onPressed: () =>
-                    Navigator.of(sheetContext).pop(controller.text.trim()),
-                child: const Text('Add'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (name != null && name.isNotEmpty) {
-      final tag = await ref.read(tagRepositoryProvider).getOrCreate(name);
-      onToggle(tag.id, true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tags = ref.watch(allTagsProvider).valueOrNull ?? const [];
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          for (final t in tags)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(t.name),
-                selected: selected.contains(t.id),
-                onSelected: (on) => onToggle(t.id, on),
-              ),
-            ),
-          ActionChip(
-            avatar: const Icon(LucideIcons.plus, size: 16),
-            label: const Text('Tag'),
-            onPressed: () => _createTag(context, ref),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _TypeSelector extends StatelessWidget {
   const _TypeSelector({required this.type, required this.onChanged});
 
@@ -536,100 +488,273 @@ class _TypeSelector extends StatelessWidget {
   }
 }
 
-class _ChipsRow extends ConsumerWidget {
-  const _ChipsRow({
-    required this.type,
-    required this.accounts,
-    required this.accountId,
-    required this.toAccountId,
-    required this.categoryId,
-    required this.date,
-    required this.onPickAccount,
-    required this.onPickToAccount,
-    required this.onPickCategory,
-    required this.onPickDate,
+/// A labelled selector tile (Account / Category / Date) above the keypad.
+class _SelectorTile extends StatelessWidget {
+  const _SelectorTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
   });
 
-  final TxType type;
-  final List<Account> accounts;
-  final int? accountId;
-  final int? toAccountId;
-  final int? categoryId;
-  final DateTime date;
-  final ValueChanged<int> onPickAccount;
-  final ValueChanged<int> onPickToAccount;
-  final ValueChanged<int> onPickCategory;
-  final ValueChanged<DateTime> onPickDate;
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
 
-  String _accountName(int? id) {
-    for (final a in accounts) {
-      if (a.id == id) return a.name;
-    }
-    return 'Account';
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final shape = RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
+    return Material(
+      color: scheme.surfaceContainer,
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 13, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: text.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small ghost pill under the amount (payee / tags entry points).
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final shape = RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(99),
+    );
+    final color = active ? scheme.primary : scheme.onSurfaceVariant;
+    return Material(
+      color: active
+          ? scheme.primary.withValues(alpha: 0.10)
+          : scheme.surfaceContainer,
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for entering a payee, with live suggestions.
+class _PayeeSheet extends ConsumerStatefulWidget {
+  const _PayeeSheet({required this.initial});
+
+  final String initial;
+
+  @override
+  ConsumerState<_PayeeSheet> createState() => _PayeeSheetState();
+}
+
+class _PayeeSheetState extends ConsumerState<_PayeeSheet> {
+  late final _controller = TextEditingController(text: widget.initial);
+  List<String> _suggestions = const [];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _update(String query) async {
+    final suggestions = await ref
+        .read(transactionRepositoryProvider)
+        .payeeSuggestions(query);
+    if (mounted) setState(() => _suggestions = suggestions);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoryMapProvider);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        0,
+        24,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActionChip(
-            avatar: const Icon(LucideIcons.wallet, size: 16),
-            label: Text(_accountName(accountId)),
-            onPressed: () async {
-              final id = await _pickAccount(context, accounts);
-              if (id != null) onPickAccount(id);
-            },
+          Text('Payee', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Who was this with?'),
+            onChanged: _update,
+            onSubmitted: (v) => Navigator.of(context).pop(v.trim()),
           ),
-          const SizedBox(width: 8),
-          if (type == TxType.transfer) ...[
-            const Icon(LucideIcons.arrowRight, size: 16),
-            const SizedBox(width: 8),
-            ActionChip(
-              avatar: const Icon(LucideIcons.wallet, size: 16),
-              label: Text(
-                toAccountId == null ? 'To…' : _accountName(toAccountId),
-              ),
-              onPressed: () async {
-                final id = await _pickAccount(
-                  context,
-                  accounts.where((a) => a.id != accountId).toList(),
-                );
-                if (id != null) onPickToAccount(id);
-              },
-            ),
-          ] else ...[
-            ActionChip(
-              avatar: const Icon(LucideIcons.shapes, size: 16),
-              label: Text(
-                categoryId == null
-                    ? 'Category'
-                    : categories[categoryId]?.name ?? 'Category',
-              ),
-              onPressed: () async {
-                final kind = type == TxType.income
-                    ? CategoryKind.income
-                    : CategoryKind.expense;
-                final id = await _pickCategory(context, ref, kind);
-                if (id != null) onPickCategory(id);
-              },
+          if (_suggestions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in _suggestions.take(6))
+                  ActionChip(
+                    label: Text(s),
+                    onPressed: () => Navigator.of(context).pop(s),
+                  ),
+              ],
             ),
           ],
-          const SizedBox(width: 8),
-          ActionChip(
-            avatar: const Icon(LucideIcons.calendar, size: 16),
-            label: Text(_dateLabel(date)),
-            onPressed: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: date,
-                firstDate: DateTime(2015),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) onPickDate(picked);
-            },
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(_controller.text.trim()),
+              child: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet for toggling and creating tags.
+class _TagsSheet extends ConsumerStatefulWidget {
+  const _TagsSheet({required this.selected, required this.onToggle});
+
+  final Set<int> selected;
+  // A (tagId, isSelected) callback reads naturally positionally.
+  // ignore: avoid_positional_boolean_parameters
+  final void Function(int id, bool on) onToggle;
+
+  @override
+  ConsumerState<_TagsSheet> createState() => _TagsSheetState();
+}
+
+class _TagsSheetState extends ConsumerState<_TagsSheet> {
+  final _newTag = TextEditingController();
+
+  @override
+  void dispose() {
+    _newTag.dispose();
+    super.dispose();
+  }
+
+  Future<void> _create() async {
+    final name = _newTag.text.trim();
+    if (name.isEmpty) return;
+    final tag = await ref.read(tagRepositoryProvider).getOrCreate(name);
+    widget.onToggle(tag.id, true);
+    _newTag.clear();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tags = ref.watch(allTagsProvider).valueOrNull ?? const [];
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        0,
+        24,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Tags', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          if (tags.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final t in tags)
+                  FilterChip(
+                    label: Text(t.name),
+                    selected: widget.selected.contains(t.id),
+                    onSelected: (on) {
+                      widget.onToggle(t.id, on);
+                      setState(() {});
+                    },
+                  ),
+              ],
+            ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newTag,
+            decoration: const InputDecoration(hintText: 'New tag name'),
+            onSubmitted: (_) => _create(),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Done'),
+            ),
           ),
         ],
       ),
