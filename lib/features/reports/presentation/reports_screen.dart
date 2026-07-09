@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,8 +20,10 @@ import 'package:ledgr/core/widgets/section_header.dart';
 import 'package:ledgr/core/widgets/soft_icon_button.dart';
 import 'package:ledgr/core/widgets/stat_card.dart';
 import 'package:ledgr/features/reports/domain/report_models.dart';
+import 'package:ledgr/features/reports/presentation/charts.dart';
 import 'package:ledgr/features/reports/presentation/report_export.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -149,23 +150,25 @@ class _OverviewTab extends ConsumerWidget {
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                PieChart(
-                                  PieChartData(
-                                    sectionsSpace: 3,
-                                    centerSpaceRadius: 56,
-                                    sections: [
-                                      for (final e in items)
-                                        PieChartSectionData(
-                                          value: e.totalMinor.toDouble(),
-                                          color: Color(
-                                            categories[e.categoryId]?.color ??
-                                                0xFF9E9E9E,
-                                          ),
-                                          title: '',
-                                          radius: 30,
-                                        ),
-                                    ],
-                                  ),
+                                SfCircularChart(
+                                  margin: EdgeInsets.zero,
+                                  series: [
+                                    DoughnutSeries<CategorySpend, String>(
+                                      dataSource: items,
+                                      xValueMapper: (e, _) =>
+                                          categories[e.categoryId]?.name ??
+                                          'Uncategorized',
+                                      yValueMapper: (e, _) => e.totalMinor,
+                                      pointColorMapper: (e, _) => Color(
+                                        categories[e.categoryId]?.color ??
+                                            0xFF9E9E9E,
+                                      ),
+                                      innerRadius: '78%',
+                                      radius: '100%',
+                                      cornerStyle: CornerStyle.bothCurve,
+                                      animationDuration: 700,
+                                    ),
+                                  ],
                                 ),
                                 Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -519,120 +522,42 @@ class _MonthBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final maxVal = points.fold<double>(
-      1,
-      (m, p) => [
-        m,
-        p.incomeMinor.toDouble(),
-        p.expenseMinor.toDouble(),
-      ].reduce((a, b) => a > b ? a : b),
-    );
 
     return Column(
       children: [
         SizedBox(
-          height: 210,
-          child: BarChart(
-            BarChartData(
-              maxY: maxVal * 1.15,
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => scheme.surfaceContainerHighest,
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    final p = points[group.x];
-                    final label = rodIndex == 0 ? 'In' : 'Out';
-                    final minor = rodIndex == 0
-                        ? p.incomeMinor
-                        : p.expenseMinor;
-                    final money = formatter.format(
-                      Money(minor: minor, currency: currency),
-                    );
-                    return BarTooltipItem(
-                      '$label $money',
-                      text.labelMedium!.copyWith(color: scheme.onSurface),
-                    );
-                  },
+          height: 220,
+          child: cartesian(
+            context: context,
+            tooltip: moneyTooltip(context, formatter, currency),
+            series: [
+              ColumnSeries<MonthPoint, String>(
+                dataSource: points,
+                xValueMapper: (p, _) =>
+                    DateFormat.MMM().format(DateTime(p.year, p.month)),
+                yValueMapper: (p, _) => p.incomeMinor,
+                color: scheme.income,
+                width: 0.7,
+                spacing: 0.12,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
                 ),
+                animationDuration: 600,
               ),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 42,
-                    interval: maxVal <= 1 ? 1 : maxVal / 3,
-                    getTitlesWidget: (value, meta) => Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: Text(
-                        _compactMinor(value.toInt()),
-                        style: text.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ),
+              ColumnSeries<MonthPoint, String>(
+                dataSource: points,
+                xValueMapper: (p, _) =>
+                    DateFormat.MMM().format(DateTime(p.year, p.month)),
+                yValueMapper: (p, _) => p.expenseMinor,
+                color: scheme.expense,
+                width: 0.7,
+                spacing: 0.12,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
                 ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      final i = value.toInt();
-                      if (i < 0 || i >= points.length) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          DateFormat.MMM().format(
-                            DateTime(points[i].year, points[i].month),
-                          ),
-                          style: text.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                animationDuration: 600,
               ),
-              gridData: FlGridData(
-                drawVerticalLine: false,
-                horizontalInterval: maxVal <= 1 ? 1 : maxVal / 3,
-                getDrawingHorizontalLine: (v) => FlLine(
-                  color: scheme.outlineVariant,
-                  strokeWidth: 1,
-                  dashArray: [4, 4],
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              barGroups: [
-                for (var i = 0; i < points.length; i++)
-                  BarChartGroupData(
-                    x: i,
-                    barsSpace: 3,
-                    barRods: [
-                      BarChartRodData(
-                        toY: points[i].incomeMinor.toDouble(),
-                        color: scheme.income,
-                        width: 9,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      BarChartRodData(
-                        toY: points[i].expenseMinor.toDouble(),
-                        color: scheme.expense,
-                        width: 9,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
         const SizedBox(height: Gaps.md),
@@ -749,92 +674,42 @@ class _NetWorthTab extends ConsumerWidget {
                     const SizedBox(height: Gaps.xl),
                     SizedBox(
                       height: 200,
-                      child: LineChart(
-                        LineChartData(
-                          lineTouchData: LineTouchData(
-                            touchTooltipData: LineTouchTooltipData(
-                              getTooltipColor: (_) =>
-                                  scheme.surfaceContainerHighest,
-                              getTooltipItems: (spots) => [
-                                for (final spot in spots)
-                                  LineTooltipItem(
-                                    formatter.format(
-                                      Money(
-                                        minor: spot.y.toInt(),
-                                        currency: currency,
-                                      ),
-                                    ),
-                                    text.labelMedium!.copyWith(
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
-                              ],
-                            ),
+                      child: cartesian(
+                        context: context,
+                        tooltip: moneyTooltip(context, formatter, currency),
+                        xAxis: CategoryAxis(
+                          majorGridLines: const MajorGridLines(width: 0),
+                          axisLine: const AxisLine(width: 0),
+                          majorTickLines: const MajorTickLines(size: 0),
+                          interval: (points.length / 4).ceilToDouble().clamp(
+                            1,
+                            12,
                           ),
-                          titlesData: FlTitlesData(
-                            leftTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            topTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            rightTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                interval: (points.length / 4)
-                                    .ceilToDouble()
-                                    .clamp(1, 12),
-                                getTitlesWidget: (value, meta) {
-                                  final i = value.toInt();
-                                  if (i < 0 || i >= points.length) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      DateFormat.MMM().format(points[i].date),
-                                      style: text.labelSmall?.copyWith(
-                                        color: scheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                          labelStyle: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
                           ),
-                          gridData: const FlGridData(show: false),
-                          borderData: FlBorderData(show: false),
-                          lineBarsData: [
-                            LineChartBarData(
-                              isCurved: true,
-                              preventCurveOverShooting: true,
-                              color: scheme.primary,
-                              barWidth: 3,
-                              dotData: const FlDotData(show: false),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    scheme.primary.withValues(alpha: 0.22),
-                                    scheme.primary.withValues(alpha: 0),
-                                  ],
-                                ),
-                              ),
-                              spots: [
-                                for (var i = 0; i < points.length; i++)
-                                  FlSpot(
-                                    i.toDouble(),
-                                    points[i].minor.toDouble(),
-                                  ),
-                              ],
-                            ),
-                          ],
                         ),
+                        yAxis: const NumericAxis(isVisible: false),
+                        series: [
+                          SplineAreaSeries<NetWorthPoint, String>(
+                            dataSource: points,
+                            xValueMapper: (p, _) =>
+                                DateFormat.MMM().format(p.date),
+                            yValueMapper: (p, _) => p.minor,
+                            splineType: SplineType.monotonic,
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                scheme.primary.withValues(alpha: 0.25),
+                                scheme.primary.withValues(alpha: 0),
+                              ],
+                            ),
+                            borderColor: scheme.primary,
+                            borderWidth: 3,
+                            animationDuration: 700,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -847,12 +722,6 @@ class _NetWorthTab extends ConsumerWidget {
       },
     );
   }
-}
-
-/// Compact axis label for minor units: 150000 minor (Rs 1,500.00) → "1.5K".
-String _compactMinor(int minor) {
-  final major = minor / 100;
-  return NumberFormat.compact().format(major);
 }
 
 /// Spending per day of the selected period — shows the rhythm of the month
@@ -894,78 +763,43 @@ class _DailyRhythm extends ConsumerWidget {
                 Gaps.md,
               ),
               child: SizedBox(
-                height: 130,
-                child: BarChart(
-                  BarChartData(
-                    maxY: maxVal * 1.15,
-                    barTouchData: BarTouchData(
-                      touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (_) => scheme.surfaceContainerHighest,
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final day = period.start.add(Duration(days: group.x));
-                          final money = formatter.format(
-                            Money(minor: perDay[group.x], currency: currency),
-                          );
-                          return BarTooltipItem(
-                            '${DateFormat('d MMM').format(day)}\n$money',
-                            text.labelSmall!.copyWith(color: scheme.onSurface),
-                          );
-                        },
-                      ),
+                height: 150,
+                child: cartesian(
+                  context: context,
+                  tooltip: moneyTooltip(context, formatter, currency),
+                  xAxis: NumericAxis(
+                    majorGridLines: const MajorGridLines(width: 0),
+                    axisLine: const AxisLine(width: 0),
+                    majorTickLines: const MajorTickLines(size: 0),
+                    minimum: 1,
+                    maximum: days.toDouble(),
+                    interval: 7,
+                    axisLabelFormatter: (args) => ChartAxisLabel(
+                      args.value.toInt().toString(),
+                      text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
                     ),
-                    titlesData: FlTitlesData(
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (value, meta) {
-                            final i = value.toInt();
-                            // fl_chart labels every bar group; gate manually
-                            // to weekly ticks.
-                            if (i < 0 || i >= days || i % 7 != 0) {
-                              return const SizedBox.shrink();
-                            }
-                            final day = period.start.add(Duration(days: i));
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '${day.day}',
-                                style: text.labelSmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    barGroups: [
-                      for (var i = 0; i < days; i++)
-                        BarChartGroupData(
-                          x: i,
-                          barRods: [
-                            BarChartRodData(
-                              toY: perDay[i].toDouble(),
-                              color: perDay[i] == maxVal.toInt()
-                                  ? scheme.expense
-                                  : scheme.primary.withValues(alpha: 0.75),
-                              width: 5,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ],
-                        ),
-                    ],
                   ),
+                  yAxis: const NumericAxis(isVisible: false),
+                  series: [
+                    ColumnSeries<MoneyPoint, num>(
+                      dataSource: [
+                        for (var i = 0; i < days; i++)
+                          MoneyPoint('${i + 1}', perDay[i]),
+                      ],
+                      xValueMapper: (p, i) => i + 1,
+                      yValueMapper: (p, _) => p.minor,
+                      pointColorMapper: (p, _) =>
+                          p.minor == maxVal.toInt() && p.minor > 0
+                          ? scheme.expense
+                          : scheme.primary,
+                      gradient: null,
+                      width: 0.62,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
+                      animationDuration: 600,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1017,10 +851,6 @@ class _SpendingPace extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final maxVal = [
-      ...thisCum,
-      ...prevCum,
-    ].reduce((a, b) => a > b ? a : b).toDouble();
     final samePoint = elapsed.clamp(1, prevDays) - 1;
     final ahead = thisCum.last > prevCum[samePoint];
     final nowLabel = formatter.format(
@@ -1058,38 +888,36 @@ class _SpendingPace extends ConsumerWidget {
                 ),
                 const SizedBox(height: Gaps.lg),
                 SizedBox(
-                  height: 150,
-                  child: LineChart(
-                    LineChartData(
-                      maxY: maxVal * 1.1,
-                      lineTouchData: const LineTouchData(enabled: false),
-                      titlesData: const FlTitlesData(show: false),
-                      gridData: const FlGridData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: [
-                            for (var i = 0; i < prevCum.length; i++)
-                              FlSpot(i.toDouble(), prevCum[i].toDouble()),
-                          ],
-                          isCurved: false,
-                          color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
-                          barWidth: 2,
-                          dashArray: [5, 5],
-                          dotData: const FlDotData(show: false),
-                        ),
-                        LineChartBarData(
-                          spots: [
-                            for (var i = 0; i < thisCum.length; i++)
-                              FlSpot(i.toDouble(), thisCum[i].toDouble()),
-                          ],
-                          isCurved: false,
-                          color: scheme.primary,
-                          barWidth: 3,
-                          dotData: const FlDotData(show: false),
-                        ),
-                      ],
-                    ),
+                  height: 160,
+                  child: cartesian(
+                    context: context,
+                    xAxis: const NumericAxis(isVisible: false),
+                    yAxis: const NumericAxis(isVisible: false),
+                    series: [
+                      LineSeries<MoneyPoint, num>(
+                        dataSource: [
+                          for (var i = 0; i < prevCum.length; i++)
+                            MoneyPoint('${i + 1}', prevCum[i]),
+                        ],
+                        xValueMapper: (p, i) => i,
+                        yValueMapper: (p, _) => p.minor,
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        width: 2,
+                        dashArray: const [5, 5],
+                        animationDuration: 600,
+                      ),
+                      LineSeries<MoneyPoint, num>(
+                        dataSource: [
+                          for (var i = 0; i < thisCum.length; i++)
+                            MoneyPoint('${i + 1}', thisCum[i]),
+                        ],
+                        xValueMapper: (p, i) => i,
+                        yValueMapper: (p, _) => p.minor,
+                        color: scheme.primary,
+                        width: 3,
+                        animationDuration: 600,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: Gaps.sm),

@@ -281,14 +281,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.8.1"
-  equatable:
-    dependency: transitive
-    description:
-      name: equatable
-      sha256: "3bce007a596ff8b3119c45d68aaef631272537c03d30e5d4534dd24bf4c5eaa2"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   fake_async:
     dependency: transitive
     description:
@@ -321,14 +313,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  fl_chart:
-    dependency: "direct main"
-    description:
-      name: fl_chart
-      sha256: "74959b99b92b9eebeed1a4049426fd67c4abc3c5a0f4d12e2877097d6a11ae08"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.69.2"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -1138,6 +1122,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  syncfusion_flutter_charts:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_charts
+      sha256: "921bf0fbe3e0d41972d7145670dc2ade24d34e7c768bd10554bb7180d7a555f5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "34.1.30"
+  syncfusion_flutter_core:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_core
+      sha256: "91fdcf04d055c1f37d3fb7c1f7a9dded507de1d14b1a9580efb63c94a68d9f95"
+      url: "https://pub.dev"
+    source: hosted
+    version: "34.1.30"
   term_glyph:
     dependency: transitive
     description:

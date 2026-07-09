@@ -1,5 +1,4 @@
 import 'package:drift/native.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +13,7 @@ import 'package:ledgr/features/reports/presentation/reports_screen.dart';
 import 'package:ledgr/features/transactions/data/transaction_repository.dart';
 import 'package:ledgr/features/transactions/domain/transaction_draft.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 Widget _wrap(AppDatabase db, Widget screen) {
   return ProviderScope(
@@ -108,7 +108,7 @@ void main() {
 
     expect(find.text('Income'), findsOneWidget);
     expect(find.text('Expense'), findsOneWidget);
-    expect(find.byType(PieChart), findsOneWidget);
+    expect(find.byType(SfCircularChart), findsOneWidget);
 
     // Trends tab: with a single month of data it shows insight tiles
     // (the month-on-month bar chart needs two active months).
@@ -116,12 +116,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Daily average'), findsOneWidget);
     expect(find.text('Biggest expense'), findsOneWidget);
-    expect(find.byType(BarChart), findsNothing);
+    expect(find.byType(SfCartesianChart), findsNothing);
 
     // Net worth tab renders a line chart.
     await tester.tap(find.text('Net worth'));
     await tester.pumpAndSettle();
-    expect(find.byType(LineChart), findsOneWidget);
+    expect(find.byType(SfCartesianChart), findsOneWidget);
 
     await _teardown(tester);
   });
