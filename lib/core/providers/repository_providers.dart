@@ -6,7 +6,9 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/features/accounts/data/account_repository.dart';
 import 'package:ledgr/features/categories/data/category_repository.dart';
+import 'package:ledgr/features/tags/data/tag_repository.dart';
 import 'package:ledgr/features/transactions/data/transaction_repository.dart';
+import 'package:ledgr/features/transactions/domain/transaction_filter.dart';
 
 final accountRepositoryProvider = Provider<AccountRepository>(
   (ref) => AccountRepository(ref.watch(databaseProvider)),
@@ -19,6 +21,24 @@ final transactionRepositoryProvider = Provider<TransactionRepository>(
 final categoryRepositoryProvider = Provider<CategoryRepository>(
   (ref) => CategoryRepository(ref.watch(databaseProvider)),
 );
+
+final tagRepositoryProvider = Provider<TagRepository>(
+  (ref) => TagRepository(ref.watch(databaseProvider)),
+);
+
+final allTagsProvider = StreamProvider<List<Tag>>(
+  (ref) => ref.watch(tagRepositoryProvider).watchAll(),
+);
+
+/// The active search/filter criteria for the search screen.
+final transactionFilterProvider = StateProvider<TransactionFilter>(
+  (ref) => const TransactionFilter(),
+);
+
+final filteredTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
+  final filter = ref.watch(transactionFilterProvider);
+  return ref.watch(transactionRepositoryProvider).watchFiltered(filter);
+});
 
 /// Active accounts with live balances (dashboard + accounts list).
 final activeAccountsProvider = StreamProvider<List<AccountWithBalance>>(
@@ -46,6 +66,9 @@ final periodTransactionsProvider = StreamProvider<List<Transaction>>((ref) {
   final period = ref.watch(selectedPeriodProvider);
   return ref.watch(transactionRepositoryProvider).watchInPeriod(period);
 });
+
+/// Ids selected in the transactions-list multi-select mode.
+final selectedTransactionsProvider = StateProvider<Set<int>>((ref) => {});
 
 final accountByIdProvider = StreamProvider.family<Account, int>(
   (ref, id) => ref.watch(accountRepositoryProvider).watchById(id),

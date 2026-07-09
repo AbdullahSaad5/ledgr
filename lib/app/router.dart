@@ -4,9 +4,11 @@ import 'package:ledgr/app/nav_shell.dart';
 import 'package:ledgr/features/accounts/presentation/account_detail_screen.dart';
 import 'package:ledgr/features/accounts/presentation/accounts_screen.dart';
 import 'package:ledgr/features/budgets/presentation/budgets_screen.dart';
+import 'package:ledgr/features/categories/presentation/categories_screen.dart';
 import 'package:ledgr/features/home/presentation/home_screen.dart';
 import 'package:ledgr/features/reports/presentation/reports_screen.dart';
 import 'package:ledgr/features/transactions/presentation/add_transaction_screen.dart';
+import 'package:ledgr/features/transactions/presentation/search_screen.dart';
 import 'package:ledgr/features/transactions/presentation/transactions_screen.dart';
 
 /// Named routes. Paths live here so navigation never hard-codes strings.
@@ -17,6 +19,8 @@ enum AppRoute {
   reports('/reports', 'reports'),
   accounts('/accounts', 'accounts'),
   accountDetail('/accounts/:id', 'accountDetail'),
+  categories('/categories', 'categories'),
+  search('/search', 'search'),
   addTransaction('/tx/new', 'addTransaction'),
   editTransaction('/tx/:id/edit', 'editTransaction');
 
@@ -89,6 +93,18 @@ GoRouter createRouter() {
         builder: (context, state) => AccountDetailScreen(
           accountId: int.parse(state.pathParameters['id']!),
         ),
+      ),
+      GoRoute(
+        path: AppRoute.categories.path,
+        name: AppRoute.categories.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const CategoriesScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.search.path,
+        name: AppRoute.search.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
         path: AppRoute.addTransaction.path,

@@ -16,6 +16,8 @@ class TransactionTile extends StatelessWidget {
     this.accountName,
     this.perspectiveAccountId,
     this.onTap,
+    this.onLongPress,
+    this.selected = false,
     super.key,
   });
 
@@ -28,6 +30,8 @@ class TransactionTile extends StatelessWidget {
   /// (account-history view); otherwise by the transaction's own type.
   final int? perspectiveAccountId;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +73,18 @@ class TransactionTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
-      leading: CircleAvatar(
-        backgroundColor: tint.withValues(alpha: 0.15),
-        child: Icon(icon, color: tint),
-      ),
+      onLongPress: onLongPress,
+      selected: selected,
+      selectedTileColor: scheme.primaryContainer.withValues(alpha: 0.4),
+      leading: selected
+          ? CircleAvatar(
+              backgroundColor: scheme.primary,
+              child: Icon(Icons.check, color: scheme.onPrimary),
+            )
+          : CircleAvatar(
+              backgroundColor: tint.withValues(alpha: 0.15),
+              child: Icon(icon, color: tint),
+            ),
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: subtitle.isEmpty ? null : Text(subtitle),
       trailing: AmountText(

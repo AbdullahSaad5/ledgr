@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
@@ -9,6 +10,7 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
+import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
@@ -25,21 +27,44 @@ class TransactionsScreen extends ConsumerWidget {
     final categories = ref.watch(categoryMapProvider);
     final accounts = ref.watch(accountMapProvider);
     final currency = ref.watch(appSettingsProvider).homeCurrency;
+    final selection = ref.watch(selectedTransactionsProvider);
+    final selecting = selection.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transactions'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: _MonthSwitcher(
-            period: period,
-            onPrev: () => ref.read(selectedPeriodProvider.notifier).state =
-                resolver.previous(period),
-            onNext: () => ref.read(selectedPeriodProvider.notifier).state =
-                resolver.next(period),
-          ),
-        ),
-      ),
+      appBar: selecting
+          ? _SelectionAppBar(selection: selection)
+          : AppBar(
+              title: const Text('Transactions'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () => context.push('/search'),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (v) {
+                    if (v == 'categories') context.push('/categories');
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'categories',
+                      child: Text('Manage categories'),
+                    ),
+                  ],
+                ),
+              ],
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(48),
+                child: _MonthSwitcher(
+                  period: period,
+                  onPrev: () =>
+                      ref.read(selectedPeriodProvider.notifier).state = resolver
+                          .previous(period),
+                  onNext: () =>
+                      ref.read(selectedPeriodProvider.notifier).state = resolver
+                          .next(period),
+                ),
+              ),
+            ),
       body: txAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -98,6 +123,92 @@ class _MonthSwitcher extends StatelessWidget {
   }
 }
 
+class _SelectionAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  const _SelectionAppBar({required this.selection});
+
+  final Set<int> selection;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  void _clear(WidgetRef ref) =>
+      ref.read(selectedTransactionsProvider.notifier).state = {};
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: () => _clear(ref),
+      ),
+      title: Text('${selection.length} selected'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.label_outline),
+          tooltip: 'Re-categorize',
+          onPressed: () async {
+            final categoryId = await _pickCategoryForBulk(context, ref);
+            if (categoryId == null) return;
+            final repo = ref.read(transactionRepositoryProvider);
+            for (final id in selection) {
+              await repo.setCategory(id, categoryId);
+            }
+            _clear(ref);
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          tooltip: 'Delete',
+          onPressed: () async {
+            final repo = ref.read(transactionRepositoryProvider);
+            final ids = selection.toList();
+            final messenger = ScaffoldMessenger.of(context);
+            for (final id in ids) {
+              await repo.softDelete(id);
+            }
+            _clear(ref);
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text('${ids.length} deleted'),
+                action: SnackBarAction(
+                  label: 'Undo',
+                  onPressed: () async {
+                    for (final id in ids) {
+                      await repo.restore(id);
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<int?> _pickCategoryForBulk(BuildContext context, WidgetRef ref) {
+    final categories =
+        ref.read(categoriesByKindProvider(CategoryKind.expense)).valueOrNull ??
+        const [];
+    return showModalBottomSheet<int>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            for (final c in categories)
+              ListTile(
+                leading: Icon(AppIcons.resolve(c.icon), color: Color(c.color)),
+                title: Text(c.name),
+                onTap: () => Navigator.of(context).pop(c.id),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Signed effect of a transaction on income/expense totals (transfers net zero).
 int _flowMinor(Transaction t) => switch (t.type) {
   TxType.income => t.amountMinor,
@@ -106,7 +217,7 @@ int _flowMinor(Transaction t) => switch (t.type) {
   TxType.transfer => 0,
 };
 
-class _TransactionList extends StatelessWidget {
+class _TransactionList extends ConsumerWidget {
   const _TransactionList({
     required this.transactions,
     required this.formatter,
@@ -122,7 +233,20 @@ class _TransactionList extends StatelessWidget {
   final String currency;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selection = ref.watch(selectedTransactionsProvider);
+    final selecting = selection.isNotEmpty;
+
+    void toggle(int id) {
+      final next = {...selection};
+      if (next.contains(id)) {
+        next.remove(id);
+      } else {
+        next.add(id);
+      }
+      ref.read(selectedTransactionsProvider.notifier).state = next;
+    }
+
     // Group by calendar day (already sorted newest-first).
     final byDay = <DateTime, List<Transaction>>{};
     for (final t in transactions) {
@@ -171,7 +295,11 @@ class _TransactionList extends StatelessWidget {
                         ? null
                         : categories[tx.categoryId],
                     accountName: accounts[tx.accountId]?.name,
-                    onTap: () => TransactionDetailSheet.show(context, tx.id),
+                    selected: selection.contains(tx.id),
+                    onLongPress: () => toggle(tx.id),
+                    onTap: selecting
+                        ? () => toggle(tx.id)
+                        : () => TransactionDetailSheet.show(context, tx.id),
                   );
                 },
               ),

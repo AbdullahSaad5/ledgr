@@ -32,15 +32,57 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   int? _toAccountId;
   int? _categoryId;
   DateTime _date = DateTime.now();
+  final Set<int> _tagIds = {};
+  List<String> _payeeSuggestions = const [];
   bool _loaded = false;
 
   bool get _isEditing => widget.transactionId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) _loadTags();
+  }
 
   @override
   void dispose() {
     _payee.dispose();
     _note.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadTags() async {
+    final tags = await ref
+        .read(tagRepositoryProvider)
+        .tagsForTransaction(widget.transactionId!);
+    if (mounted) {
+      setState(() => _tagIds.addAll(tags.map((t) => t.id)));
+    }
+  }
+
+  Future<void> _updatePayeeSuggestions(String query) async {
+    final repo = ref.read(transactionRepositoryProvider);
+    final suggestions = await repo.payeeSuggestions(query);
+    if (mounted) {
+      setState(
+        () => _payeeSuggestions = suggestions
+            .where((s) => s != _payee.text)
+            .toList(),
+      );
+    }
+  }
+
+  Future<void> _pickPayee(String payee) async {
+    _payee.text = payee;
+    setState(() => _payeeSuggestions = const []);
+    if (_type != TxType.transfer && _categoryId == null) {
+      final category = await ref
+          .read(transactionRepositoryProvider)
+          .commonCategoryForPayee(payee);
+      if (category != null && mounted) {
+        setState(() => _categoryId = category);
+      }
+    }
   }
 
   void _hydrate(Transaction tx) {
@@ -84,11 +126,14 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
 
     final repo = ref.read(transactionRepositoryProvider);
+    final int id;
     if (_isEditing) {
       await repo.update(widget.transactionId!, draft);
+      id = widget.transactionId!;
     } else {
-      await repo.create(draft);
+      id = await repo.create(draft);
     }
+    await ref.read(tagRepositoryProvider).setTagsForTransaction(id, _tagIds);
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -133,52 +178,86 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               if (t != TxType.transfer) _toAccountId = null;
             }),
           ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (expressionActive)
-                  Text(
-                    _keypad.expression,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (expressionActive)
+                          Text(
+                            _keypad.expression,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        FittedBox(
+                          child: Text(
+                            formatter.format(amount),
+                            style: Theme.of(context).textTheme.displayMedium
+                                ?.copyWith(fontFeatures: const []),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                FittedBox(
-                  child: Text(
-                    formatter.format(amount),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.displayMedium?.copyWith(fontFeatures: const []),
+                  const SizedBox(height: 8),
+                  _ChipsRow(
+                    type: _type,
+                    accounts: accounts,
+                    accountId: _accountId,
+                    toAccountId: _toAccountId,
+                    categoryId: _categoryId,
+                    date: _date,
+                    onPickAccount: (id) => setState(() => _accountId = id),
+                    onPickToAccount: (id) => setState(() => _toAccountId = id),
+                    onPickCategory: (id) => setState(() => _categoryId = id),
+                    onPickDate: (d) => setState(() => _date = d),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _ChipsRow(
-            type: _type,
-            accounts: accounts,
-            accountId: _accountId,
-            toAccountId: _toAccountId,
-            categoryId: _categoryId,
-            date: _date,
-            onPickAccount: (id) => setState(() => _accountId = id),
-            onPickToAccount: (id) => setState(() => _toAccountId = id),
-            onPickCategory: (id) => setState(() => _categoryId = id),
-            onPickDate: (d) => setState(() => _date = d),
-          ),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: TextField(
-              controller: _payee,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.store_outlined),
-                hintText: 'Payee (optional)',
-                border: InputBorder.none,
+                  if (_payeeSuggestions.isNotEmpty)
+                    SizedBox(
+                      height: 40,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        children: [
+                          for (final s in _payeeSuggestions)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ActionChip(
+                                label: Text(s),
+                                onPressed: () => _pickPayee(s),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: TextField(
+                      controller: _payee,
+                      onChanged: _updatePayeeSuggestions,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.store_outlined),
+                        hintText: 'Payee (optional)',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                  _TagRow(
+                    selected: _tagIds,
+                    onToggle: (id, on) => setState(() {
+                      if (on) {
+                        _tagIds.add(id);
+                      } else {
+                        _tagIds.remove(id);
+                      }
+                    }),
+                  ),
+                ],
               ),
             ),
           ),
@@ -191,6 +270,72 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 onChanged: () => setState(() {}),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TagRow extends ConsumerWidget {
+  const _TagRow({required this.selected, required this.onToggle});
+
+  final Set<int> selected;
+  // A (tagId, isSelected) callback reads naturally positionally.
+  // ignore: avoid_positional_boolean_parameters
+  final void Function(int id, bool on) onToggle;
+
+  Future<void> _createTag(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('New tag'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Tag name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (name != null && name.isNotEmpty) {
+      final tag = await ref.read(tagRepositoryProvider).getOrCreate(name);
+      onToggle(tag.id, true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tags = ref.watch(allTagsProvider).valueOrNull ?? const [];
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        children: [
+          for (final t in tags)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(t.name),
+                selected: selected.contains(t.id),
+                onSelected: (on) => onToggle(t.id, on),
+              ),
+            ),
+          ActionChip(
+            avatar: const Icon(Icons.add, size: 18),
+            label: const Text('Tag'),
+            onPressed: () => _createTag(context, ref),
           ),
         ],
       ),

@@ -73,4 +73,30 @@ abstract final class AppIcons {
     'home',
     'more_horiz',
   ];
+
+  /// The curated set offered in the category icon picker.
+  static const categoryPickerNames = <String>[
+    'restaurant',
+    'shopping_basket',
+    'directions_bus',
+    'local_gas_station',
+    'receipt_long',
+    'home',
+    'shopping_bag',
+    'favorite',
+    'school',
+    'movie',
+    'subscriptions',
+    'flight',
+    'family_restroom',
+    'volunteer_activism',
+    'account_balance',
+    'spa',
+    'card_giftcard',
+    'payments',
+    'storefront',
+    'work',
+    'trending_up',
+    'category',
+  ];
 }
