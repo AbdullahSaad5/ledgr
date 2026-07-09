@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class UpcomingScreen extends ConsumerWidget {
   const UpcomingScreen({super.key});
@@ -25,7 +28,7 @@ class UpcomingScreen extends ConsumerWidget {
         data: (items) {
           if (items.isEmpty) {
             return const EmptyState(
-              icon: Icons.event_available,
+              icon: LucideIcons.calendarCheck,
               title: 'Nothing upcoming',
               message: 'Recurring rules due in the next 30 days show here.',
             );
@@ -34,16 +37,17 @@ class UpcomingScreen extends ConsumerWidget {
             children: [
               for (final item in items)
                 ListTile(
-                  leading: Icon(
-                    Icons.schedule,
-                    color: item.isOverdue ? scheme.error : null,
+                  leading: IconBadge(
+                    icon: LucideIcons.clock,
+                    color: item.isOverdue ? scheme.expense : scheme.primary,
+                    iconSize: 18,
                   ),
                   title: Text(item.rule.title),
                   subtitle: Text(
                     '${DateFormat.yMMMd().format(item.date)}'
                     '${item.isOverdue ? ' · Overdue' : ''}',
                     style: item.isOverdue
-                        ? TextStyle(color: scheme.error)
+                        ? TextStyle(color: scheme.expense)
                         : null,
                   ),
                   trailing: Row(
@@ -64,7 +68,7 @@ class UpcomingScreen extends ConsumerWidget {
                         child: const Text('Add'),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.skip_next),
+                        icon: const Icon(LucideIcons.skipForward, size: 18),
                         tooltip: 'Skip',
                         onPressed: () async {
                           await ref

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -8,8 +8,14 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_header.dart';
+import 'package:ledgr/core/widgets/menu_sheet.dart';
+import 'package:ledgr/core/widgets/period_switcher.dart';
+import 'package:ledgr/core/widgets/pressable.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/budgets/presentation/budget_form_sheet.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class BudgetsScreen extends ConsumerWidget {
   const BudgetsScreen({super.key});
@@ -22,84 +28,90 @@ class BudgetsScreen extends ConsumerWidget {
     final formatter = ref.watch(moneyFormatterProvider);
     final categories = ref.watch(categoryMapProvider);
     final currency = ref.watch(appSettingsProvider).homeCurrency;
-    final label = DateFormat.yMMMM().format(
-      DateTime(period.anchorYear, period.anchorMonth),
-    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Budgets'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () =>
-                    ref.read(selectedPeriodProvider.notifier).state = resolver
-                        .previous(period),
-              ),
-              SizedBox(
-                width: 160,
-                child: Text(label, textAlign: TextAlign.center),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () =>
-                    ref.read(selectedPeriodProvider.notifier).state = resolver
-                        .next(period),
-              ),
-            ],
-          ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 84),
+        child: FloatingActionButton.extended(
+          onPressed: () => BudgetFormSheet.show(context),
+          icon: const Icon(LucideIcons.plus),
+          label: const Text('Budget'),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => BudgetFormSheet.show(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Budget'),
-      ),
-      body: progressAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
-        data: (items) {
-          if (items.isEmpty) {
-            return EmptyState(
-              icon: Icons.pie_chart_outline,
-              title: 'No budgets yet',
-              message: 'Set a monthly limit to track your spending.',
-              action: FilledButton.icon(
-                onPressed: () => BudgetFormSheet.show(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Add budget'),
-              ),
-            );
-          }
-          items.sort((a, b) => b.fraction.compareTo(a.fraction));
-          return ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              for (final p in items)
-                _BudgetTile(
-                  progress: p,
-                  formatter: formatter,
-                  currency: currency,
-                  categoryName: p.isOverall
-                      ? 'Overall'
-                      : categories[p.budget.categoryId]?.name ?? 'Category',
-                  icon: p.isOverall
-                      ? Icons.account_balance_wallet
-                      : AppIcons.resolve(
-                          categories[p.budget.categoryId]?.icon ?? 'category',
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const LedgrHeader(title: 'Budgets'),
+            PeriodSwitcher(
+              period: period,
+              onPrev: () => ref.read(selectedPeriodProvider.notifier).state =
+                  resolver.previous(period),
+              onNext: () => ref.read(selectedPeriodProvider.notifier).state =
+                  resolver.next(period),
+            ),
+            Expanded(
+              child: progressAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('$e')),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return EmptyState(
+                      icon: LucideIcons.pieChart,
+                      title: 'No budgets yet',
+                      message: 'Set a monthly limit to track your spending.',
+                      action: FilledButton.icon(
+                        onPressed: () => BudgetFormSheet.show(context),
+                        icon: const Icon(LucideIcons.plus),
+                        label: const Text('Add budget'),
+                      ),
+                    );
+                  }
+                  items.sort((a, b) => b.fraction.compareTo(a.fraction));
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      Gaps.page,
+                      Gaps.xs,
+                      Gaps.page,
+                      120,
+                    ),
+                    children: [
+                      for (final p in items) ...[
+                        _BudgetTile(
+                          progress: p,
+                          formatter: formatter,
+                          currency: currency,
+                          categoryName: p.isOverall
+                              ? 'Overall'
+                              : categories[p.budget.categoryId]?.name ??
+                                    'Category',
+                          icon: p.isOverall
+                              ? LucideIcons.wallet
+                              : AppIcons.resolve(
+                                  categories[p.budget.categoryId]?.icon ??
+                                      'category',
+                                ),
+                          accent: p.isOverall
+                              ? Theme.of(context).colorScheme.primary
+                              : Color(
+                                  categories[p.budget.categoryId]?.color ??
+                                      0xFF607D8B,
+                                ),
+                          onEdit: () =>
+                              BudgetFormSheet.show(context, budget: p.budget),
+                          onDelete: () => ref
+                              .read(budgetRepositoryProvider)
+                              .delete(p.budget.id),
                         ),
-                  onEdit: () => BudgetFormSheet.show(context, budget: p.budget),
-                  onDelete: () =>
-                      ref.read(budgetRepositoryProvider).delete(p.budget.id),
-                ),
-              const SizedBox(height: 80),
-            ],
-          );
-        },
+                        const SizedBox(height: Gaps.md),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -112,6 +124,7 @@ class _BudgetTile extends StatelessWidget {
     required this.currency,
     required this.categoryName,
     required this.icon,
+    required this.accent,
     required this.onEdit,
     required this.onDelete,
   });
@@ -121,73 +134,129 @@ class _BudgetTile extends StatelessWidget {
   final String currency;
   final String categoryName;
   final IconData icon;
+  final Color accent;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     final fraction = progress.fraction;
+    final over = progress.remainingMinor < 0;
     final barColor = fraction >= 1.0
-        ? scheme.error
+        ? scheme.expense
         : fraction >= 0.8
-        ? Colors.orange
+        ? scheme.warning
         : scheme.primary;
-    final limit = Money(minor: progress.limitMinor, currency: currency);
-    final limitLabel = 'of ${formatter.format(limit)}';
+    final remaining = Money(
+      minor: progress.remainingMinor.abs(),
+      currency: currency,
+    );
+    final limitLabel = formatter.format(
+      Money(minor: progress.limitMinor, currency: currency),
+    );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Pressable(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onEdit,
+          child: Padding(
+            padding: const EdgeInsets.all(Gaps.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, size: 20, color: scheme.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    categoryName,
-                    style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    IconBadge(
+                      icon: icon,
+                      color: accent,
+                      size: 38,
+                      iconSize: 18,
+                    ),
+                    const SizedBox(width: Gaps.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(categoryName, style: text.titleSmall),
+                          Text(
+                            over
+                                ? '${formatter.format(remaining)} over'
+                                : '${formatter.format(remaining)} left',
+                            style: text.labelSmall?.copyWith(
+                              color: over
+                                  ? scheme.expense
+                                  : scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${(fraction * 100).round()}%',
+                      style: text.titleSmall?.copyWith(color: barColor),
+                    ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.moreVertical, size: 18),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => MenuSheet.show(
+                        context,
+                        title: categoryName,
+                        items: [
+                          MenuSheetItem(
+                            icon: LucideIcons.pencil,
+                            label: 'Edit',
+                            onTap: onEdit,
+                          ),
+                          MenuSheetItem(
+                            icon: LucideIcons.trash2,
+                            label: 'Delete',
+                            onTap: onDelete,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Gaps.md),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: fraction),
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, _) => LinearProgressIndicator(
+                      value: value,
+                      minHeight: 9,
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      color: barColor,
+                    ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  onSelected: (v) => v == 'edit' ? onEdit() : onDelete(),
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                const SizedBox(height: Gaps.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    AmountText(
+                      Money(minor: progress.spentMinor, currency: currency),
+                      formatter: formatter,
+                      style: text.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'of $limitLabel',
+                      style: text.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: fraction,
-                minHeight: 10,
-                backgroundColor: scheme.surfaceContainerHighest,
-                color: barColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                AmountText(
-                  Money(minor: progress.spentMinor, currency: currency),
-                  formatter: formatter,
-                ),
-                Text(
-                  limitLabel,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

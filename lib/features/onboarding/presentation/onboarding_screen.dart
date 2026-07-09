@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_header.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 const _currencies = <(String, String)>[
   ('PKR', 'Rs '),
@@ -145,11 +148,7 @@ class _WelcomePage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.account_balance_wallet,
-            size: 72,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          const LedgrLogoMark(size: 84),
           const SizedBox(height: 24),
           Text(
             'Welcome to Ledgr',
@@ -186,10 +185,16 @@ class _CurrencyPage extends StatelessWidget {
         const SizedBox(height: 16),
         for (final c in _currencies)
           ListTile(
+            leading: IconBadge(
+              icon: LucideIcons.coins,
+              color: Theme.of(context).colorScheme.primary,
+              size: 38,
+              iconSize: 17,
+            ),
             title: Text('${c.$1}  (${c.$2.trim()})'),
             trailing: c.$1 == selected
                 ? Icon(
-                    Icons.check,
+                    LucideIcons.circleCheck,
                     color: Theme.of(context).colorScheme.primary,
                   )
                 : null,

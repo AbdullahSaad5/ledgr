@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
@@ -7,9 +8,11 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:ledgr/features/debts/data/debt_repository.dart';
 import 'package:ledgr/features/debts/presentation/debt_form_sheet.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class DebtsScreen extends ConsumerWidget {
   const DebtsScreen({super.key});
@@ -54,7 +57,7 @@ class _DebtList extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'add-debt-$direction',
         onPressed: () => DebtFormSheet.show(context, direction),
-        icon: const Icon(Icons.add),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('Debt'),
       ),
       body: debtsAsync.when(
@@ -63,7 +66,7 @@ class _DebtList extends ConsumerWidget {
         data: (debts) {
           if (debts.isEmpty) {
             return EmptyState(
-              icon: Icons.handshake_outlined,
+              icon: LucideIcons.handshake,
               title: direction == DebtDirection.lent
                   ? 'Nobody owes you'
                   : 'You owe nobody',
@@ -143,6 +146,11 @@ class _DebtTile extends StatelessWidget {
         : (debt.paidMinor / debt.debt.principalMinor).clamp(0.0, 1.0);
     return ListTile(
       onTap: onTap,
+      leading: IconBadge(
+        icon: LucideIcons.userRound,
+        color: debt.isOverdue ? scheme.expense : scheme.primary,
+        iconSize: 18,
+      ),
       title: Text(debt.debt.person),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +162,7 @@ class _DebtTile extends StatelessWidget {
               value: fraction,
               minHeight: 6,
               backgroundColor: scheme.surfaceContainerHighest,
-              color: debt.isOverdue ? scheme.error : scheme.primary,
+              color: debt.isOverdue ? scheme.expense : scheme.primary,
             ),
           ),
           if (debt.isOverdue)
@@ -162,7 +170,7 @@ class _DebtTile extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 'Overdue',
-                style: TextStyle(color: scheme.error, fontSize: 12),
+                style: TextStyle(color: scheme.expense, fontSize: 12),
               ),
             ),
         ],

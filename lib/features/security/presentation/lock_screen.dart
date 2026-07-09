@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/ledgr_header.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// PIN + biometric unlock screen shown over the app while locked.
 class LockScreen extends ConsumerStatefulWidget {
@@ -61,12 +64,12 @@ class _LockScreenState extends ConsumerState<LockScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock, size: 48, color: scheme.primary),
+            const LedgrLogoMark(size: 64),
             const SizedBox(height: 16),
             Text(
               _error ? 'Wrong PIN, try again' : 'Enter your PIN',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: _error ? scheme.error : null,
+                color: _error ? scheme.expense : null,
               ),
             ),
             const SizedBox(height: 24),
@@ -148,15 +151,15 @@ class _Keypad extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (onBiometric != null)
-              key('', onTap: onBiometric, child: const Icon(Icons.fingerprint))
+              key(
+                '',
+                onTap: onBiometric,
+                child: const Icon(LucideIcons.fingerprint),
+              )
             else
               const SizedBox(width: 88),
             key('0'),
-            key(
-              '',
-              onTap: onBackspace,
-              child: const Icon(Icons.backspace_outlined),
-            ),
+            key('', onTap: onBackspace, child: const Icon(LucideIcons.delete)),
           ],
         ),
       ],

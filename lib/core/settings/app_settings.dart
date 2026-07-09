@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
-    this.dynamicColor = true,
+    this.dynamicColor = false,
     this.seedColor = 0xFF00696D,
     this.homeCurrency = 'PKR',
     this.currencySymbol = 'Rs ',

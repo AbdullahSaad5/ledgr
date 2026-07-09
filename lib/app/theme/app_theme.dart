@@ -124,6 +124,17 @@ abstract final class AppTheme {
           textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
+      tabBarTheme: TabBarThemeData(
+        dividerColor: Colors.transparent,
+        labelStyle: textTheme.titleSmall,
+        unselectedLabelStyle: textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        labelColor: scheme.primary,
+        unselectedLabelColor: scheme.onSurfaceVariant,
+        indicatorSize: TabBarIndicatorSize.label,
+        indicatorColor: scheme.primary,
+      ),
       chipTheme: ChipThemeData(
         shape: RoundedSuperellipseBorder(
           borderRadius: BorderRadius.circular(10),

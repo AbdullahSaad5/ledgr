@@ -8,8 +8,10 @@ import 'package:ledgr/core/money/money_x.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/features/transactions/domain/transaction_draft.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/calc_keypad.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Add or edit a transaction (PLAN.md §6.3). The 5-second path: amount on the
 /// keypad, pick a type/account/category, save.
@@ -256,7 +258,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       controller: _payee,
                       onChanged: _updatePayeeSuggestions,
                       decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.store_outlined),
+                        prefixIcon: Icon(LucideIcons.store, size: 20),
                         hintText: 'Payee (optional)',
                         border: InputBorder.none,
                       ),
@@ -348,7 +350,7 @@ class _TagRow extends ConsumerWidget {
               ),
             ),
           ActionChip(
-            avatar: const Icon(Icons.add, size: 18),
+            avatar: const Icon(LucideIcons.plus, size: 16),
             label: const Text('Tag'),
             onPressed: () => _createTag(context, ref),
           ),
@@ -422,7 +424,7 @@ class _ChipsRow extends ConsumerWidget {
       child: Row(
         children: [
           ActionChip(
-            avatar: const Icon(Icons.account_balance_wallet, size: 18),
+            avatar: const Icon(LucideIcons.wallet, size: 16),
             label: Text(_accountName(accountId)),
             onPressed: () async {
               final id = await _pickAccount(context, accounts);
@@ -431,13 +433,10 @@ class _ChipsRow extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           if (type == TxType.transfer) ...[
-            const Icon(Icons.arrow_forward, size: 16),
+            const Icon(LucideIcons.arrowRight, size: 16),
             const SizedBox(width: 8),
             ActionChip(
-              avatar: const Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 18,
-              ),
+              avatar: const Icon(LucideIcons.wallet, size: 16),
               label: Text(
                 toAccountId == null ? 'To…' : _accountName(toAccountId),
               ),
@@ -451,7 +450,7 @@ class _ChipsRow extends ConsumerWidget {
             ),
           ] else ...[
             ActionChip(
-              avatar: const Icon(Icons.category_outlined, size: 18),
+              avatar: const Icon(LucideIcons.shapes, size: 16),
               label: Text(
                 categoryId == null
                     ? 'Category'
@@ -468,7 +467,7 @@ class _ChipsRow extends ConsumerWidget {
           ],
           const SizedBox(width: 8),
           ActionChip(
-            avatar: const Icon(Icons.event, size: 18),
+            avatar: const Icon(LucideIcons.calendar, size: 16),
             label: Text(_dateLabel(date)),
             onPressed: () async {
               final picked = await showDatePicker(
@@ -505,13 +504,10 @@ Future<int?> _pickAccount(BuildContext context, List<Account> accounts) {
         children: [
           for (final a in accounts)
             ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Color(a.color),
-                child: Icon(
-                  AppIcons.resolve(a.icon),
-                  color: Colors.white,
-                  size: 20,
-                ),
+              leading: IconBadge(
+                icon: AppIcons.resolve(a.icon),
+                color: Color(a.color),
+                iconSize: 19,
               ),
               title: Text(a.name),
               onTap: () => Navigator.of(context).pop(a.id),
@@ -543,12 +539,11 @@ Future<int?> _pickCategory(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Color(c.color).withValues(alpha: 0.2),
-                    child: Icon(
-                      AppIcons.resolve(c.icon),
-                      color: Color(c.color),
-                    ),
+                  IconBadge(
+                    icon: AppIcons.resolve(c.icon),
+                    color: Color(c.color),
+                    size: 44,
+                    iconSize: 20,
                   ),
                   const SizedBox(height: 4),
                   Text(

@@ -4,7 +4,10 @@ import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/menu_sheet.dart';
 import 'package:ledgr/features/categories/presentation/category_form_sheet.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -47,7 +50,7 @@ class _CategoryList extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         heroTag: 'add-category-$kind',
         onPressed: () => CategoryFormSheet.show(context, kind: kind),
-        child: const Icon(Icons.add),
+        child: const Icon(LucideIcons.plus),
       ),
       body: categoriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -56,27 +59,36 @@ class _CategoryList extends ConsumerWidget {
           children: [
             for (final c in categories)
               ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Color(c.color).withValues(alpha: 0.2),
-                  child: Icon(AppIcons.resolve(c.icon), color: Color(c.color)),
+                leading: IconBadge(
+                  icon: AppIcons.resolve(c.icon),
+                  color: Color(c.color),
+                  iconSize: 19,
                 ),
                 title: Text(c.name),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (v) async {
-                    if (v == 'edit') {
-                      await CategoryFormSheet.show(
-                        context,
-                        kind: kind,
-                        category: c,
-                      );
-                    } else if (v == 'delete') {
-                      await _confirmDelete(context, ref, c, categories);
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
-                  ],
+                trailing: IconButton(
+                  icon: const Icon(LucideIcons.moreVertical, size: 18),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => MenuSheet.show(
+                    context,
+                    title: c.name,
+                    items: [
+                      MenuSheetItem(
+                        icon: LucideIcons.pencil,
+                        label: 'Edit',
+                        onTap: () => CategoryFormSheet.show(
+                          context,
+                          kind: kind,
+                          category: c,
+                        ),
+                      ),
+                      MenuSheetItem(
+                        icon: LucideIcons.trash2,
+                        label: 'Delete',
+                        onTap: () =>
+                            _confirmDelete(context, ref, c, categories),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(height: 80),
@@ -137,7 +149,12 @@ class _MergeDialog extends StatelessWidget {
           for (final c in options)
             ListTile(
               dense: true,
-              leading: Icon(AppIcons.resolve(c.icon), color: Color(c.color)),
+              leading: IconBadge(
+                icon: AppIcons.resolve(c.icon),
+                color: Color(c.color),
+                size: 34,
+                iconSize: 16,
+              ),
               title: Text(c.name),
               onTap: () => Navigator.of(context).pop(c.id),
             ),

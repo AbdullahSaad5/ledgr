@@ -7,7 +7,9 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/features/recurring/presentation/recurring_form_sheet.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class RecurringScreen extends ConsumerWidget {
   const RecurringScreen({super.key});
@@ -23,7 +25,7 @@ class RecurringScreen extends ConsumerWidget {
         title: const Text('Recurring'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.upcoming_outlined),
+            icon: const Icon(LucideIcons.calendarClock, size: 20),
             tooltip: 'Upcoming',
             onPressed: () => context.push('/upcoming'),
           ),
@@ -31,7 +33,7 @@ class RecurringScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => RecurringFormSheet.show(context),
-        icon: const Icon(Icons.add),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('Rule'),
       ),
       body: rulesAsync.when(
@@ -40,7 +42,7 @@ class RecurringScreen extends ConsumerWidget {
         data: (rules) {
           if (rules.isEmpty) {
             return const EmptyState(
-              icon: Icons.repeat,
+              icon: LucideIcons.repeat,
               title: 'No recurring rules',
               message: 'Automate rent, salary, subscriptions, and more.',
             );
@@ -49,10 +51,10 @@ class RecurringScreen extends ConsumerWidget {
             children: [
               for (final r in rules)
                 ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(
-                      r.autoPost ? Icons.autorenew : Icons.notifications,
-                    ),
+                  leading: IconBadge(
+                    icon: r.autoPost ? LucideIcons.refreshCw : LucideIcons.bell,
+                    color: Theme.of(context).colorScheme.primary,
+                    iconSize: 18,
                   ),
                   title: Text(r.title),
                   subtitle: Text(
@@ -67,14 +69,14 @@ class RecurringScreen extends ConsumerWidget {
                         formatter: formatter,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(LucideIcons.trash2, size: 18),
                         onPressed: () =>
                             ref.read(recurringRepositoryProvider).delete(r.id),
                       ),
                     ],
                   ),
                 ),
-              const SizedBox(height: 80),
+              const SizedBox(height: 96),
             ],
           );
         },

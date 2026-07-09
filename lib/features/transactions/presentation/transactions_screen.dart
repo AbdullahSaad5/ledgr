@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
-import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
+import 'package:ledgr/core/widgets/day_header.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_header.dart';
+import 'package:ledgr/core/widgets/menu_sheet.dart';
+import 'package:ledgr/core/widgets/period_switcher.dart';
+import 'package:ledgr/core/widgets/soft_icon_button.dart';
+import 'package:ledgr/core/widgets/stat_card.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
@@ -31,158 +38,141 @@ class TransactionsScreen extends ConsumerWidget {
     final selecting = selection.isNotEmpty;
 
     return Scaffold(
-      appBar: selecting
-          ? _SelectionAppBar(selection: selection)
-          : AppBar(
-              title: const Text('Transactions'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () => context.push('/search'),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    if (v == 'categories') context.push('/categories');
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'categories',
-                      child: Text('Manage categories'),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            if (selecting)
+              _SelectionHeader(selection: selection)
+            else
+              LedgrHeader(
+                title: 'Transactions',
+                actions: [
+                  SoftIconButton(
+                    icon: LucideIcons.search,
+                    tooltip: 'Search',
+                    onPressed: () => context.push('/search'),
+                  ),
+                  SoftIconButton(
+                    icon: LucideIcons.moreVertical,
+                    tooltip: 'More',
+                    onPressed: () => MenuSheet.show(
+                      context,
+                      items: [
+                        MenuSheetItem(
+                          icon: LucideIcons.shapes,
+                          label: 'Manage categories',
+                          onTap: () => context.push('/categories'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(48),
-                child: _MonthSwitcher(
-                  period: period,
-                  onPrev: () =>
-                      ref.read(selectedPeriodProvider.notifier).state = resolver
-                          .previous(period),
-                  onNext: () =>
-                      ref.read(selectedPeriodProvider.notifier).state = resolver
-                          .next(period),
-                ),
+                  ),
+                ],
+              ),
+            PeriodSwitcher(
+              period: period,
+              onPrev: () => ref.read(selectedPeriodProvider.notifier).state =
+                  resolver.previous(period),
+              onNext: () => ref.read(selectedPeriodProvider.notifier).state =
+                  resolver.next(period),
+            ),
+            Expanded(
+              child: txAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('$e')),
+                data: (transactions) {
+                  if (transactions.isEmpty) {
+                    return const EmptyState(
+                      icon: LucideIcons.receipt,
+                      title: 'Nothing this month',
+                      message: 'Tap + to add your first transaction.',
+                    );
+                  }
+                  return _TransactionList(
+                    transactions: transactions,
+                    formatter: formatter,
+                    categories: categories,
+                    accounts: accounts,
+                    currency: currency,
+                  );
+                },
               ),
             ),
-      body: txAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
-        data: (transactions) {
-          if (transactions.isEmpty) {
-            return const EmptyState(
-              icon: Icons.receipt_long_outlined,
-              title: 'Nothing this month',
-              message: 'Tap + to add your first transaction.',
-            );
-          }
-          return _TransactionList(
-            transactions: transactions,
-            formatter: formatter,
-            categories: categories,
-            accounts: accounts,
-            currency: currency,
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 }
 
-class _MonthSwitcher extends StatelessWidget {
-  const _MonthSwitcher({
-    required this.period,
-    required this.onPrev,
-    required this.onNext,
-  });
-
-  final Period period;
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = DateFormat.yMMMM().format(
-      DateTime(period.anchorYear, period.anchorMonth),
-    );
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(icon: const Icon(Icons.chevron_left), onPressed: onPrev),
-        SizedBox(
-          width: 160,
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        IconButton(icon: const Icon(Icons.chevron_right), onPressed: onNext),
-      ],
-    );
-  }
-}
-
-class _SelectionAppBar extends ConsumerWidget implements PreferredSizeWidget {
-  const _SelectionAppBar({required this.selection});
+/// Contextual header shown while transactions are multi-selected.
+class _SelectionHeader extends ConsumerWidget {
+  const _SelectionHeader({required this.selection});
 
   final Set<int> selection;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   void _clear(WidgetRef ref) =>
       ref.read(selectedTransactionsProvider.notifier).state = {};
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.close),
-        onPressed: () => _clear(ref),
-      ),
-      title: Text('${selection.length} selected'),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.label_outline),
-          tooltip: 'Re-categorize',
-          onPressed: () async {
-            final categoryId = await _pickCategoryForBulk(context, ref);
-            if (categoryId == null) return;
-            final repo = ref.read(transactionRepositoryProvider);
-            for (final id in selection) {
-              await repo.setCategory(id, categoryId);
-            }
-            _clear(ref);
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_outline),
-          tooltip: 'Delete',
-          onPressed: () async {
-            final repo = ref.read(transactionRepositoryProvider);
-            final ids = selection.toList();
-            final messenger = ScaffoldMessenger.of(context);
-            for (final id in ids) {
-              await repo.softDelete(id);
-            }
-            _clear(ref);
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text('${ids.length} deleted'),
-                action: SnackBarAction(
-                  label: 'Undo',
-                  onPressed: () async {
-                    for (final id in ids) {
-                      await repo.restore(id);
-                    }
-                  },
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Gaps.md, Gaps.md, Gaps.lg, Gaps.md),
+      child: Row(
+        children: [
+          SoftIconButton(
+            icon: LucideIcons.x,
+            tooltip: 'Clear selection',
+            onPressed: () => _clear(ref),
+          ),
+          const SizedBox(width: Gaps.sm),
+          Expanded(
+            child: Text(
+              '${selection.length} selected',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          SoftIconButton(
+            icon: LucideIcons.tag,
+            tooltip: 'Re-categorize',
+            onPressed: () async {
+              final categoryId = await _pickCategoryForBulk(context, ref);
+              if (categoryId == null) return;
+              final repo = ref.read(transactionRepositoryProvider);
+              for (final id in selection) {
+                await repo.setCategory(id, categoryId);
+              }
+              _clear(ref);
+            },
+          ),
+          SoftIconButton(
+            icon: LucideIcons.trash2,
+            tooltip: 'Delete',
+            onPressed: () async {
+              final repo = ref.read(transactionRepositoryProvider);
+              final ids = selection.toList();
+              final messenger = ScaffoldMessenger.of(context);
+              for (final id in ids) {
+                await repo.softDelete(id);
+              }
+              _clear(ref);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text('${ids.length} deleted'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    onPressed: () async {
+                      for (final id in ids) {
+                        await repo.restore(id);
+                      }
+                    },
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
-      ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -198,7 +188,12 @@ class _SelectionAppBar extends ConsumerWidget implements PreferredSizeWidget {
           children: [
             for (final c in categories)
               ListTile(
-                leading: Icon(AppIcons.resolve(c.icon), color: Color(c.color)),
+                leading: IconBadge(
+                  icon: AppIcons.resolve(c.icon),
+                  color: Color(c.color),
+                  size: 38,
+                  iconSize: 18,
+                ),
                 title: Text(c.name),
                 onTap: () => Navigator.of(context).pop(c.id),
               ),
@@ -266,18 +261,32 @@ class _TransactionList extends ConsumerWidget {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: _MonthSummary(
-            incomeMinor: income,
-            expenseMinor: expense,
-            currency: currency,
+          child: StatCard(
             formatter: formatter,
+            items: [
+              StatItem(
+                label: 'Income',
+                money: Money(minor: income, currency: currency),
+                tone: AmountTone.income,
+              ),
+              StatItem(
+                label: 'Expense',
+                money: Money(minor: expense, currency: currency),
+                tone: AmountTone.expense,
+              ),
+              StatItem(
+                label: 'Net',
+                money: Money(minor: income - expense, currency: currency),
+                tone: AmountTone.auto,
+              ),
+            ],
           ),
         ),
         for (final day in days)
           SliverMainAxisGroup(
             slivers: [
               SliverToBoxAdapter(
-                child: _DayHeader(
+                child: DayHeader(
                   day: day,
                   netMinor: byDay[day]!.fold(0, (s, t) => s + _flowMinor(t)),
                   currency: currency,
@@ -305,105 +314,8 @@ class _TransactionList extends ConsumerWidget {
               ),
             ],
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        const SliverToBoxAdapter(child: SizedBox(height: 120)),
       ],
-    );
-  }
-}
-
-class _MonthSummary extends StatelessWidget {
-  const _MonthSummary({
-    required this.incomeMinor,
-    required this.expenseMinor,
-    required this.currency,
-    required this.formatter,
-  });
-
-  final int incomeMinor;
-  final int expenseMinor;
-  final String currency;
-  final MoneyFormatter formatter;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _stat(
-            context,
-            'Income',
-            Money(minor: incomeMinor, currency: currency),
-            AmountTone.income,
-          ),
-          _stat(
-            context,
-            'Expense',
-            Money(minor: expenseMinor, currency: currency),
-            AmountTone.expense,
-          ),
-          _stat(
-            context,
-            'Net',
-            Money(minor: incomeMinor - expenseMinor, currency: currency),
-            AmountTone.auto,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _stat(
-    BuildContext context,
-    String label,
-    Money money,
-    AmountTone tone,
-  ) {
-    return Column(
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 2),
-        AmountText(money, formatter: formatter, tone: tone),
-      ],
-    );
-  }
-}
-
-class _DayHeader extends StatelessWidget {
-  const _DayHeader({
-    required this.day,
-    required this.netMinor,
-    required this.currency,
-    required this.formatter,
-  });
-
-  final DateTime day;
-  final int netMinor;
-  final String currency;
-  final MoneyFormatter formatter;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            DateFormat('EEE, d MMM').format(day),
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          AmountText(
-            Money(minor: netMinor, currency: currency),
-            formatter: formatter,
-            tone: AmountTone.auto,
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
-        ],
-      ),
     );
   }
 }

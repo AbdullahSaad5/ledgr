@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ledgr/core/money/keypad_controller.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// The calculator keypad (PLAN.md §6.3). Drives a [KeypadController]; calls
 /// [onChanged] after each key so the parent can rebuild the amount display.
+/// Keys are superellipse tiles with a press-scale response and haptics.
 class CalcKeypad extends StatelessWidget {
   const CalcKeypad({
     required this.controller,
@@ -56,36 +58,14 @@ class CalcKeypad extends StatelessWidget {
     return Expanded(
       child: Row(
         children: [
-          for (final key in keys) Expanded(child: _buildKey(context, key)),
+          for (final key in keys)
+            Expanded(
+              child: _KeypadButton(
+                keyDef: key,
+                onTap: () => _tap(() => _apply(key)),
+              ),
+            ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildKey(BuildContext context, _Key key) {
-    final scheme = Theme.of(context).colorScheme;
-    final isOp = key.kind == _KeyKind.operator;
-    return Padding(
-      padding: const EdgeInsets.all(4),
-      child: Material(
-        color: isOp
-            ? scheme.secondaryContainer
-            : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => _tap(() => _apply(key)),
-          child: Center(
-            child: key.kind == _KeyKind.backspace
-                ? const Icon(Icons.backspace_outlined)
-                : Text(
-                    key.label,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: isOp ? scheme.onSecondaryContainer : null,
-                    ),
-                  ),
-          ),
-        ),
       ),
     );
   }
@@ -103,6 +83,65 @@ class CalcKeypad extends StatelessWidget {
       case _KeyKind.backspace:
         controller.backspace();
     }
+  }
+}
+
+class _KeypadButton extends StatefulWidget {
+  const _KeypadButton({required this.keyDef, required this.onTap});
+
+  final _Key keyDef;
+  final VoidCallback onTap;
+
+  @override
+  State<_KeypadButton> createState() => _KeypadButtonState();
+}
+
+class _KeypadButtonState extends State<_KeypadButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final key = widget.keyDef;
+    final isOp = key.kind == _KeyKind.operator;
+    final shape = RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(18),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Listener(
+        onPointerDown: (_) => setState(() => _pressed = true),
+        onPointerUp: (_) => setState(() => _pressed = false),
+        onPointerCancel: (_) => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.93 : 1.0,
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOut,
+          child: Material(
+            color: isOp ? scheme.primaryContainer : scheme.surfaceContainerHigh,
+            shape: shape,
+            child: InkWell(
+              customBorder: shape,
+              onTap: widget.onTap,
+              child: Center(
+                child: key.kind == _KeyKind.backspace
+                    ? Icon(LucideIcons.delete, color: scheme.onSurfaceVariant)
+                    : Text(
+                        key.label,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: isOp
+                                  ? scheme.onPrimaryContainer
+                                  : scheme.onSurface,
+                            ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

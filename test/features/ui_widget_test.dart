@@ -15,6 +15,7 @@ import 'package:ledgr/features/transactions/domain/transaction_draft.dart';
 import 'package:ledgr/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:ledgr/features/transactions/presentation/transactions_screen.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _Seed {
   const _Seed(this.db, this.cash, this.bank);
@@ -176,7 +177,7 @@ void main() {
     expect(find.text('Cafe'), findsWidgets);
 
     // Move to the previous month → empty state.
-    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.tap(find.byIcon(LucideIcons.chevronLeft));
     await tester.pumpAndSettle();
     expect(find.text('Nothing this month'), findsOneWidget);
 
@@ -219,8 +220,8 @@ void main() {
     expect(find.text('Balance'), findsOneWidget);
     expect(find.text('Cafe'), findsWidgets);
 
-    // Reconcile flow.
-    await tester.tap(find.byType(PopupMenuButton<String>));
+    // Reconcile flow (via the MenuSheet).
+    await tester.tap(find.byIcon(LucideIcons.moreVertical));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Reconcile'));
     await tester.pumpAndSettle();

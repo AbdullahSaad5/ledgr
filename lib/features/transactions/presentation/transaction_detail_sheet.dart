@@ -5,6 +5,7 @@ import 'package:ledgr/core/money/money_x.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Read-only transaction detail with edit / duplicate / delete actions.
 class TransactionDetailSheet extends ConsumerWidget {
@@ -53,16 +54,16 @@ class TransactionDetailSheet extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               if (tx.payee != null && tx.payee!.isNotEmpty)
-                _row(context, Icons.store_outlined, tx.payee!),
+                _row(context, LucideIcons.store, tx.payee!),
               if (category != null)
-                _row(context, Icons.category_outlined, category.name),
+                _row(context, LucideIcons.shapes, category.name),
               _row(
                 context,
-                Icons.event,
+                LucideIcons.calendar,
                 '${tx.date.day}/${tx.date.month}/${tx.date.year}',
               ),
               if (tx.note != null && tx.note!.isNotEmpty)
-                _row(context, Icons.notes_outlined, tx.note!),
+                _row(context, LucideIcons.notebookPen, tx.note!),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -72,7 +73,7 @@ class TransactionDetailSheet extends ConsumerWidget {
                         Navigator.of(context).pop();
                         context.push('/tx/${tx.id}/edit');
                       },
-                      icon: const Icon(Icons.edit_outlined),
+                      icon: const Icon(LucideIcons.pencil, size: 18),
                       label: const Text('Edit'),
                     ),
                   ),
@@ -85,7 +86,7 @@ class TransactionDetailSheet extends ConsumerWidget {
                             .duplicate(tx.id);
                         if (context.mounted) Navigator.of(context).pop();
                       },
-                      icon: const Icon(Icons.copy_outlined),
+                      icon: const Icon(LucideIcons.copy, size: 18),
                       label: const Text('Duplicate'),
                     ),
                   ),
@@ -100,7 +101,7 @@ class TransactionDetailSheet extends ConsumerWidget {
                   ).colorScheme.onErrorContainer,
                 ),
                 onPressed: () => _delete(context, ref, tx.id),
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(LucideIcons.trash2, size: 18),
                 label: const Text('Delete'),
               ),
             ],
@@ -133,7 +134,7 @@ class TransactionDetailSheet extends ConsumerWidget {
         children: [
           Icon(
             icon,
-            size: 20,
+            size: 18,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 12),

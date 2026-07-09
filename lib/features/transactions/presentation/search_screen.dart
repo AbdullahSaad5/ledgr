@@ -9,6 +9,7 @@ import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/features/transactions/presentation/filter_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -58,7 +59,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             isLabelVisible: filter.activeCount > 0,
             label: Text('${filter.activeCount}'),
             child: IconButton(
-              icon: const Icon(Icons.tune),
+              icon: const Icon(LucideIcons.slidersHorizontal, size: 20),
               onPressed: () => FilterSheet.show(context),
             ),
           ),
@@ -71,7 +72,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         data: (results) {
           if (results.isEmpty) {
             return const EmptyState(
-              icon: Icons.search_off,
+              icon: LucideIcons.searchX,
               title: 'No matches',
               message: 'Try different text or adjust the filters.',
             );

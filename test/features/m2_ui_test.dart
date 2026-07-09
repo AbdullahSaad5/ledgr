@@ -16,6 +16,7 @@ import 'package:ledgr/features/transactions/presentation/add_transaction_screen.
 import 'package:ledgr/features/transactions/presentation/search_screen.dart';
 import 'package:ledgr/features/transactions/presentation/transactions_screen.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 Widget _wrap(AppDatabase db, Widget screen, {List<Override> extra = const []}) {
   return ProviderScope(
@@ -161,7 +162,7 @@ void main() {
     await tester.pumpWidget(_wrap(db, const SearchScreen()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(LucideIcons.slidersHorizontal));
     await tester.pumpAndSettle();
     expect(find.text('Filters'), findsOneWidget);
 
@@ -226,7 +227,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1 selected'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.tap(find.byIcon(LucideIcons.trash2));
     await tester.pumpAndSettle();
 
     final live = await (db.select(
@@ -245,7 +246,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // First category's overflow menu → Delete (no transactions use it).
-    await tester.tap(find.byType(PopupMenuButton<String>).first);
+    await tester.tap(find.byIcon(LucideIcons.moreVertical).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 
 /// A friendly empty-state placeholder: icon, title, and a one-line hint
 /// (PLAN.md §7 — every empty screen gets one).
@@ -25,7 +26,13 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            IconBadge(
+              icon: icon,
+              color: theme.colorScheme.onSurfaceVariant,
+              size: 76,
+              iconSize: 34,
+              background: theme.colorScheme.surfaceContainer,
+            ),
             const SizedBox(height: 16),
             Text(
               title,
