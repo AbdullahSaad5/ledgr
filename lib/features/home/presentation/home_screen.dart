@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ledgr/core/widgets/empty_state.dart';
+import 'package:go_router/go_router.dart';
+import 'package:ledgr/core/money/money.dart';
+import 'package:ledgr/core/providers/repository_providers.dart';
+import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/amount_text.dart';
+import 'package:ledgr/features/accounts/presentation/account_form_sheet.dart';
+import 'package:ledgr/features/accounts/presentation/widgets/account_card.dart';
+import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
+import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -9,12 +17,133 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppL10n.of(context);
+    final formatter = ref.watch(moneyFormatterProvider);
+    final currency = ref.watch(appSettingsProvider).homeCurrency;
+    final accountsAsync = ref.watch(activeAccountsProvider);
+    final netWorth = ref.watch(netWorthProvider).valueOrNull ?? 0;
+    final recent =
+        ref.watch(periodTransactionsProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoryMapProvider);
+    final accountMap = ref.watch(accountMapProvider);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.dashboardTitle)),
-      body: EmptyState(
-        icon: Icons.account_balance_wallet_outlined,
-        title: l10n.emptyDashboardTitle,
-        message: l10n.emptyDashboardBody,
+      body: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.netWorthLabel,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AmountText(
+                  Money(minor: netWorth, currency: currency),
+                  formatter: formatter,
+                  tone: AmountTone.auto,
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 172,
+            child: accountsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('$e')),
+              data: (accounts) => ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final e in accounts)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: AccountCard(
+                        account: e.account,
+                        balanceMinor: e.balanceMinor,
+                        formatter: formatter,
+                        onTap: () => context.push('/accounts/${e.account.id}'),
+                      ),
+                    ),
+                  _AddAccountCard(onTap: () => AccountFormSheet.show(context)),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Accounts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                TextButton(
+                  onPressed: () => context.push('/accounts'),
+                  child: const Text('See all'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
+            child: Text(
+              'Recent',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          if (recent.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: Text('No transactions yet')),
+            )
+          else
+            for (final tx in recent.take(6))
+              TransactionTile(
+                transaction: tx,
+                formatter: formatter,
+                category: tx.categoryId == null
+                    ? null
+                    : categories[tx.categoryId],
+                accountName: accountMap[tx.accountId]?.name,
+                onTap: () => TransactionDetailSheet.show(context, tx.id),
+              ),
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddAccountCard extends StatelessWidget {
+  const _AddAccountCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 130,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add, color: scheme.primary),
+              const SizedBox(height: 8),
+              const Text('Add account'),
+            ],
+          ),
+        ),
       ),
     );
   }

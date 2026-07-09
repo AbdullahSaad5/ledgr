@@ -8,7 +8,7 @@ import 'package:ledgr/core/money/money.dart';
 /// number segment, no leading binary operator, operator replacement), and
 /// evaluates to a [Decimal]/[Money] via [ExpressionEvaluator].
 class KeypadController {
-  KeypadController([String initial = '']) : _expression = initial;
+  KeypadController([this.expression = '']);
 
   /// Seed the keypad from an existing amount for the edit flow.
   factory KeypadController.fromMoney(Money money) {
@@ -16,71 +16,81 @@ class KeypadController {
     return KeypadController(text);
   }
 
-  String _expression;
+  /// The raw expression string being built.
+  String expression;
 
-  String get expression => _expression;
-  bool get isEmpty => _expression.isEmpty;
+  bool get isEmpty => expression.isEmpty;
 
   static const _operators = {'+', '-', '*', '/'};
 
   void pressDigit(String digit) {
     assert(digit.length == 1 && '0123456789'.contains(digit), 'not a digit');
-    _expression += digit;
+    expression += digit;
   }
 
   void pressDecimal() {
     final segment = _currentSegment();
     if (segment.contains('.')) return; // one decimal per number
     if (segment.isEmpty) {
-      _expression += '0.';
+      expression += '0.';
     } else {
-      _expression += '.';
+      expression += '.';
     }
   }
 
   void pressOperator(String op) {
     assert(_operators.contains(op), 'not an operator');
-    if (_expression.isEmpty) {
+    if (expression.isEmpty) {
       // Only a leading minus (negative number) is meaningful.
-      if (op == '-') _expression = '-';
+      if (op == '-') expression = '-';
       return;
     }
     // Trim a dangling decimal point before appending an operator.
-    if (_expression.endsWith('.')) {
-      _expression = _expression.substring(0, _expression.length - 1);
+    if (expression.endsWith('.')) {
+      expression = expression.substring(0, expression.length - 1);
     }
     if (_endsWithOperator()) {
       // Replace the trailing operator.
-      _expression = _expression.substring(0, _expression.length - 1) + op;
+      expression = expression.substring(0, expression.length - 1) + op;
     } else {
-      _expression += op;
+      expression += op;
     }
   }
 
   void backspace() {
-    if (_expression.isEmpty) return;
-    _expression = _expression.substring(0, _expression.length - 1);
+    if (expression.isEmpty) return;
+    expression = expression.substring(0, expression.length - 1);
   }
 
-  void clear() => _expression = '';
+  void clear() => expression = '';
 
-  Decimal evaluate() => ExpressionEvaluator.evaluate(_expression);
+  Decimal evaluate() => ExpressionEvaluator.evaluate(expression);
 
   Money toMoney(String currency) => Money.fromDecimal(evaluate(), currency);
 
+  /// Evaluate to [Money], returning zero on an incomplete/invalid expression
+  /// (e.g. mid-entry, or divide-by-zero). For live display use.
+  Money toMoneyOrZero(String currency) {
+    try {
+      return toMoney(currency);
+    } on Object {
+      return Money.zero(currency);
+    }
+  }
+
   bool _endsWithOperator() =>
-      _expression.isNotEmpty &&
-      _operators.contains(_expression[_expression.length - 1]);
+      expression.isNotEmpty &&
+      _operators.contains(expression[expression.length - 1]);
 
   /// The trailing run of number characters (digits and the decimal point).
   String _currentSegment() {
-    var i = _expression.length;
+    var i = expression.length;
     while (i > 0) {
-      final ch = _expression[i - 1];
+      final ch = expression[i - 1];
       final isNumberChar = ch == '.' || '0123456789'.contains(ch);
       if (!isNumberChar) break;
       i--;
     }
-    return _expression.substring(i);
+    return expression.substring(i);
   }
 }

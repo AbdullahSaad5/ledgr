@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledgr/app/nav_shell.dart';
+import 'package:ledgr/features/accounts/presentation/account_detail_screen.dart';
+import 'package:ledgr/features/accounts/presentation/accounts_screen.dart';
 import 'package:ledgr/features/budgets/presentation/budgets_screen.dart';
 import 'package:ledgr/features/home/presentation/home_screen.dart';
 import 'package:ledgr/features/reports/presentation/reports_screen.dart';
@@ -13,7 +15,10 @@ enum AppRoute {
   transactions('/transactions', 'transactions'),
   budgets('/budgets', 'budgets'),
   reports('/reports', 'reports'),
-  addTransaction('/tx/new', 'addTransaction');
+  accounts('/accounts', 'accounts'),
+  accountDetail('/accounts/:id', 'accountDetail'),
+  addTransaction('/tx/new', 'addTransaction'),
+  editTransaction('/tx/:id/edit', 'editTransaction');
 
   const AppRoute(this.path, this.routeName);
 
@@ -72,12 +77,37 @@ GoRouter createRouter() {
         ],
       ),
       GoRoute(
+        path: AppRoute.accounts.path,
+        name: AppRoute.accounts.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const AccountsScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.accountDetail.path,
+        name: AppRoute.accountDetail.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => AccountDetailScreen(
+          accountId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
         path: AppRoute.addTransaction.path,
         name: AppRoute.addTransaction.name,
         parentNavigatorKey: _rootKey,
         pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
           child: AddTransactionScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.editTransaction.path,
+        name: AppRoute.editTransaction.name,
+        parentNavigatorKey: _rootKey,
+        pageBuilder: (context, state) => MaterialPage(
+          fullscreenDialog: true,
+          child: AddTransactionScreen(
+            transactionId: int.parse(state.pathParameters['id']!),
+          ),
         ),
       ),
     ],

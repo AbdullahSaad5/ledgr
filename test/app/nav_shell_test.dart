@@ -19,13 +19,23 @@ Widget _bootApp() {
   );
 }
 
+/// Tears down the widget tree so Drift stream subscriptions cancel and their
+/// close timers drain before the test framework checks for pending timers.
+Future<void> _teardown(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('boots to the dashboard with the empty state', (tester) async {
+  testWidgets('boots to the dashboard', (tester) async {
     await tester.pumpWidget(_bootApp());
     await tester.pumpAndSettle();
 
     expect(find.text('Home'), findsWidgets);
-    expect(find.text('Nothing here yet'), findsOneWidget);
+    expect(find.text('Net worth'), findsOneWidget);
+    expect(find.text('Add account'), findsOneWidget);
+
+    await _teardown(tester);
   });
 
   testWidgets('bottom navigation switches branches', (tester) async {
@@ -34,7 +44,7 @@ void main() {
 
     await tester.tap(find.text('Transactions'));
     await tester.pumpAndSettle();
-    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('Nothing this month'), findsOneWidget);
 
     await tester.tap(find.text('Budgets'));
     await tester.pumpAndSettle();
@@ -43,15 +53,19 @@ void main() {
     await tester.tap(find.text('Reports'));
     await tester.pumpAndSettle();
     expect(find.text('Coming soon'), findsOneWidget);
+
+    await _teardown(tester);
   });
 
   testWidgets('the FAB opens the add-transaction screen', (tester) async {
     await tester.pumpWidget(_bootApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.close), findsOneWidget);
+    expect(find.text('New transaction'), findsOneWidget);
+
+    await _teardown(tester);
   });
 }
