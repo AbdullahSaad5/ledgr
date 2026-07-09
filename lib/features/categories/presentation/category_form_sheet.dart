@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/color_swatches.dart';
+import 'package:ledgr/core/widgets/group_card.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 
-/// Create or edit a category.
+/// Create or edit a category, as a full screen.
 class CategoryFormSheet extends ConsumerStatefulWidget {
   const CategoryFormSheet({required this.kind, this.category, super.key});
 
@@ -18,11 +21,11 @@ class CategoryFormSheet extends ConsumerStatefulWidget {
     required CategoryKind kind,
     Category? category,
   }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => CategoryFormSheet(kind: kind, category: category),
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => CategoryFormSheet(kind: kind, category: category),
+      ),
     );
   }
 
@@ -70,58 +73,104 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final scheme = Theme.of(context).colorScheme;
+    final accent = Color(_color);
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: const CloseButton(),
+        title: Text(_isEditing ? 'Edit category' : 'New category'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.xs, Gaps.page, 24),
         children: [
-          Text(
-            _isEditing ? 'Edit category' : 'New category',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _name,
-            autofocus: !_isEditing,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 200,
-            child: GridView.count(
-              crossAxisCount: 6,
-              children: [
-                for (final name in AppIcons.categoryPickerNames)
-                  IconButton(
-                    onPressed: () => setState(() => _icon = name),
-                    icon: Icon(AppIcons.resolve(name)),
-                    isSelected: _icon == name,
-                    style: IconButton.styleFrom(
-                      backgroundColor: _icon == name
-                          ? Color(_color).withValues(alpha: 0.2)
-                          : null,
-                      foregroundColor: _icon == name ? Color(_color) : null,
+          GroupCard(
+            title: 'Name',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Gaps.lg),
+                child: Row(
+                  children: [
+                    IconBadge(
+                      icon: AppIcons.resolve(_icon),
+                      color: accent,
+                      iconSize: 19,
                     ),
-                  ),
-              ],
-            ),
+                    const SizedBox(width: Gaps.md),
+                    Expanded(
+                      child: TextField(
+                        controller: _name,
+                        autofocus: !_isEditing,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(labelText: 'Name'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          ColorSwatchPicker(
-            selected: _color,
-            onSelected: (c) => setState(() => _color = c),
+          GroupCard(
+            title: 'Icon',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Gaps.md),
+                child: GridView.count(
+                  crossAxisCount: 6,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: Gaps.sm,
+                  crossAxisSpacing: Gaps.sm,
+                  children: [
+                    for (final name in AppIcons.categoryPickerNames)
+                      InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => setState(() => _icon = name),
+                        child: IconBadge(
+                          icon: AppIcons.resolve(name),
+                          size: 44,
+                          iconSize: 19,
+                          background: _icon == name
+                              ? accent.withValues(alpha: 0.22)
+                              : scheme.surfaceContainer,
+                          color: _icon == name
+                              ? accent
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          FilledButton(
+          GroupCard(
+            title: 'Color',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Gaps.lg),
+                child: ColorSwatchPicker(
+                  selected: _color,
+                  onSelected: (c) => setState(() => _color = c),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(
+          Gaps.page,
+          Gaps.sm,
+          Gaps.page,
+          Gaps.md,
+        ),
+        child: SizedBox(
+          height: 52,
+          child: FilledButton(
             onPressed: _save,
             child: Text(_isEditing ? 'Save' : 'Create'),
           ),
-        ],
+        ),
       ),
     );
   }

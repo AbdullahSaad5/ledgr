@@ -20,9 +20,12 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Center within the *visible* area: on tab screens the body extends
+    // behind the floating nav bar, which MediaQuery reports as bottom padding.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.fromLTRB(32, 32, 32, 32 + bottomInset),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

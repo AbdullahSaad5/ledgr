@@ -1,22 +1,24 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Create a recurring rule.
 class RecurringFormSheet extends ConsumerStatefulWidget {
   const RecurringFormSheet({super.key});
 
   static Future<void> show(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const RecurringFormSheet(),
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => const RecurringFormSheet(),
+      ),
     );
   }
 
@@ -78,112 +80,115 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
         : CategoryKind.expense;
     final categories =
         ref.watch(categoriesByKindProvider(kind)).valueOrNull ?? const [];
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'New recurring',
-              style: Theme.of(context).textTheme.titleLarge,
+    return Scaffold(
+      appBar: AppBar(
+        leading: const CloseButton(),
+        title: const Text('New recurring'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.xs, Gaps.page, 24),
+        children: [
+          TextField(
+            controller: _title,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Title (e.g. Rent, Netflix)',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _title,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Title (e.g. Rent, Netflix)',
-                border: OutlineInputBorder(),
-              ),
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<TxType>(
+            segments: const [
+              ButtonSegment(value: TxType.expense, label: Text('Expense')),
+              ButtonSegment(value: TxType.income, label: Text('Income')),
+            ],
+            selected: {_type},
+            onSelectionChanged: (s) => setState(() {
+              _type = s.first;
+              _categoryId = null;
+            }),
+          ),
+          const SizedBox(height: 16),
+          MoneyField(
+            controller: _amount,
+            currency: settings.homeCurrency,
+            label: 'Amount',
+            symbol: settings.currencySymbol,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<int>(
+            initialValue: _accountId,
+            decoration: const InputDecoration(
+              labelText: 'Account',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            SegmentedButton<TxType>(
-              segments: const [
-                ButtonSegment(value: TxType.expense, label: Text('Expense')),
-                ButtonSegment(value: TxType.income, label: Text('Income')),
-              ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() {
-                _type = s.first;
-                _categoryId = null;
-              }),
+            items: [
+              for (final a in accounts)
+                DropdownMenuItem(value: a.id, child: Text(a.name)),
+            ],
+            onChanged: (v) => setState(() => _accountId = v),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<int>(
+            initialValue: _categoryId,
+            decoration: const InputDecoration(
+              labelText: 'Category',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            MoneyField(
-              controller: _amount,
-              currency: settings.homeCurrency,
-              label: 'Amount',
-              symbol: settings.currencySymbol,
+            items: [
+              for (final c in categories)
+                DropdownMenuItem(value: c.id, child: Text(c.name)),
+            ],
+            onChanged: (v) => setState(() => _categoryId = v),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<Frequency>(
+            initialValue: _frequency,
+            decoration: const InputDecoration(
+              labelText: 'Frequency',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              initialValue: _accountId,
-              decoration: const InputDecoration(
-                labelText: 'Account',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final a in accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
-              ],
-              onChanged: (v) => setState(() => _accountId = v),
+            items: [
+              for (final f in Frequency.values)
+                DropdownMenuItem(value: f, child: Text(_freqLabel(f))),
+            ],
+            onChanged: (v) => setState(() => _frequency = v!),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            icon: const Icon(LucideIcons.calendar, size: 18),
+            label: Text(
+              'Starts ${_startDate.day}/${_startDate.month}/${_startDate.year}',
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              initialValue: _categoryId,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.name)),
-              ],
-              onChanged: (v) => setState(() => _categoryId = v),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Frequency>(
-              initialValue: _frequency,
-              decoration: const InputDecoration(
-                labelText: 'Frequency',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final f in Frequency.values)
-                  DropdownMenuItem(value: f, child: Text(_freqLabel(f))),
-              ],
-              onChanged: (v) => setState(() => _frequency = v!),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.event),
-              label: Text(
-                'Starts ${_startDate.day}/${_startDate.month}/${_startDate.year}',
-              ),
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _startDate,
-                  firstDate: DateTime(2015),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) setState(() => _startDate = picked);
-              },
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Post automatically'),
-              subtitle: const Text('Off = remind me to add it'),
-              value: _autoPost,
-              onChanged: (v) => setState(() => _autoPost = v),
-            ),
-            const SizedBox(height: 8),
-            FilledButton(onPressed: _save, child: const Text('Create')),
-          ],
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _startDate,
+                firstDate: DateTime(2015),
+                lastDate: DateTime(2100),
+              );
+              if (picked != null) setState(() => _startDate = picked);
+            },
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Post automatically'),
+            subtitle: const Text('Off = remind me to add it'),
+            value: _autoPost,
+            onChanged: (v) => setState(() => _autoPost = v),
+          ),
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(
+          Gaps.page,
+          Gaps.sm,
+          Gaps.page,
+          Gaps.md,
+        ),
+        child: SizedBox(
+          height: 52,
+          child: FilledButton(onPressed: _save, child: const Text('Create')),
         ),
       ),
     );

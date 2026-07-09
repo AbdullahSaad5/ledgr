@@ -30,25 +30,25 @@ class CalcKeypad extends StatelessWidget {
           _Key.digit('7'),
           _Key.digit('8'),
           _Key.digit('9'),
-          _Key.op('÷', '/'),
+          _Key.op(LucideIcons.divide, '/'),
         ]),
         _row(context, [
           _Key.digit('4'),
           _Key.digit('5'),
           _Key.digit('6'),
-          _Key.op('×', '*'),
+          _Key.op(LucideIcons.x, '*'),
         ]),
         _row(context, [
           _Key.digit('1'),
           _Key.digit('2'),
           _Key.digit('3'),
-          _Key.op('−', '-'),
+          _Key.op(LucideIcons.minus, '-'),
         ]),
         _row(context, [
           _Key.digit('.'),
           _Key.digit('0'),
           _Key.backspace(),
-          _Key.op('+', '+'),
+          _Key.op(LucideIcons.plus, '+'),
         ]),
       ],
     );
@@ -125,17 +125,23 @@ class _KeypadButtonState extends State<_KeypadButton> {
               customBorder: shape,
               onTap: widget.onTap,
               child: Center(
-                child: key.kind == _KeyKind.backspace
-                    ? Icon(LucideIcons.delete, color: scheme.onSurfaceVariant)
-                    : Text(
-                        key.label,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: isOp
-                                  ? scheme.onPrimaryContainer
-                                  : scheme.onSurface,
-                            ),
-                      ),
+                child: switch (key.kind) {
+                  _KeyKind.backspace => Icon(
+                    LucideIcons.delete,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  _KeyKind.operator => Icon(
+                    key.icon,
+                    size: 22,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                  _KeyKind.digit => Text(
+                    key.label,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                },
               ),
             ),
           ),
@@ -148,12 +154,14 @@ class _KeypadButtonState extends State<_KeypadButton> {
 enum _KeyKind { digit, operator, backspace }
 
 class _Key {
-  const _Key(this.label, this.value, this.kind);
-  _Key.digit(String d) : this(d, d, _KeyKind.digit);
-  _Key.op(String label, String value) : this(label, value, _KeyKind.operator);
-  _Key.backspace() : this('⌫', 'back', _KeyKind.backspace);
+  const _Key(this.label, this.value, this.kind, this.icon);
+  _Key.digit(String d) : this(d, d, _KeyKind.digit, null);
+  _Key.op(IconData icon, String value)
+    : this('', value, _KeyKind.operator, icon);
+  _Key.backspace() : this('⌫', 'back', _KeyKind.backspace, null);
 
   final String label;
   final String value;
   final _KeyKind kind;
+  final IconData? icon;
 }

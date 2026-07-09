@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/keypad_controller.dart';
@@ -184,111 +185,199 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       appBar: AppBar(
         leading: const CloseButton(),
         title: Text(_isEditing ? 'Edit transaction' : 'New transaction'),
-        actions: [TextButton(onPressed: _save, child: const Text('Save'))],
       ),
-      body: Column(
-        children: [
-          _TypeSelector(
-            type: _type,
-            onChanged: (t) => setState(() {
-              _type = t;
-              if (t != TxType.transfer) _toAccountId = null;
-            }),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (expressionActive)
-                          Text(
-                            _keypad.expression,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(color: scheme.onSurfaceVariant),
-                          ),
-                        FittedBox(
+      body: SafeArea(
+        child: Column(
+          children: [
+            _TypeSelector(
+              type: _type,
+              onChanged: (t) => setState(() {
+                _type = t;
+                if (t != TxType.transfer) _toAccountId = null;
+              }),
+            ),
+            // The amount owns the flexible space, so the layout stays
+            // balanced instead of leaving a dead gap above the keypad.
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (expressionActive)
+                        Text(
+                          _keypad.expression,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      FittedBox(
+                        child: AnimatedScale(
+                          scale: amount.minor == 0 ? 0.96 : 1.0,
+                          duration: const Duration(milliseconds: 150),
                           child: Text(
                             formatter.format(amount),
-                            style: Theme.of(context).textTheme.displayMedium
-                                ?.copyWith(fontFeatures: const []),
+                            style: Theme.of(context).textTheme.displayLarge
+                                ?.copyWith(
+                                  color: amount.minor == 0
+                                      ? scheme.onSurfaceVariant
+                                      : scheme.onSurface,
+                                ),
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Everything the transaction needs, in one aligned card.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                      child: _ChipsRow(
+                        type: _type,
+                        accounts: accounts,
+                        accountId: _accountId,
+                        toAccountId: _toAccountId,
+                        categoryId: _categoryId,
+                        date: _date,
+                        onPickAccount: (id) => setState(() => _accountId = id),
+                        onPickToAccount: (id) =>
+                            setState(() => _toAccountId = id),
+                        onPickCategory: (id) =>
+                            setState(() => _categoryId = id),
+                        onPickDate: (d) => setState(() => _date = d),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  _ChipsRow(
-                    type: _type,
-                    accounts: accounts,
-                    accountId: _accountId,
-                    toAccountId: _toAccountId,
-                    categoryId: _categoryId,
-                    date: _date,
-                    onPickAccount: (id) => setState(() => _accountId = id),
-                    onPickToAccount: (id) => setState(() => _toAccountId = id),
-                    onPickCategory: (id) => setState(() => _categoryId = id),
-                    onPickDate: (d) => setState(() => _date = d),
-                  ),
-                  if (_payeeSuggestions.isNotEmpty)
-                    SizedBox(
-                      height: 40,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        children: [
-                          for (final s in _payeeSuggestions)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ActionChip(
-                                label: Text(s),
-                                onPressed: () => _pickPayee(s),
+                    if (_payeeSuggestions.isNotEmpty)
+                      SizedBox(
+                        height: 40,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            for (final s in _payeeSuggestions)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ActionChip(
+                                  label: Text(s),
+                                  onPressed: () => _pickPayee(s),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextField(
+                        controller: _payee,
+                        onChanged: _updatePayeeSuggestions,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          filled: false,
+                          icon: Icon(
+                            LucideIcons.store,
+                            size: 18,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          hintText: 'Payee (optional)',
+                          hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+                          border: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: TextField(
-                      controller: _payee,
-                      onChanged: _updatePayeeSuggestions,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(LucideIcons.store, size: 20),
-                        hintText: 'Payee (optional)',
-                        border: InputBorder.none,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: _TagRow(
+                        selected: _tagIds,
+                        onToggle: (id, on) => setState(() {
+                          if (on) {
+                            _tagIds.add(id);
+                          } else {
+                            _tagIds.remove(id);
+                          }
+                        }),
                       ),
                     ),
-                  ),
-                  _TagRow(
-                    selected: _tagIds,
-                    onToggle: (id, on) => setState(() {
-                      if (on) {
-                        _tagIds.add(id);
-                      } else {
-                        _tagIds.remove(id);
-                      }
-                    }),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          SizedBox(
-            height: 300,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: CalcKeypad(
-                controller: _keypad,
-                onChanged: () => setState(() {}),
+            // While the system keyboard is up (payee/tag entry), the calc
+            // keypad and save bar give way instead of stacking under it.
+            if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
+              SizedBox(
+                height: (MediaQuery.sizeOf(context).height * 0.30).clamp(
+                  170.0,
+                  264.0,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: CalcKeypad(
+                    controller: _keypad,
+                    onChanged: () => setState(() {}),
+                  ),
+                ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: _SaveButton(onPressed: _save),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-width gradient save bar anchored under the keypad.
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final shape = RoundedSuperellipseBorder(
+      borderRadius: BorderRadius.circular(18),
+    );
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: shape,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: scheme.heroGradient,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: shape,
+        child: InkWell(
+          customBorder: shape,
+          onTap: onPressed,
+          child: Center(
+            child: Text(
+              'Save',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: scheme.onHero),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -304,25 +393,43 @@ class _TagRow extends ConsumerWidget {
 
   Future<void> _createTag(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
-    final name = await showDialog<String>(
+    final name = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('New tag'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Tag name'),
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          0,
+          24,
+          MediaQuery.viewInsetsOf(sheetContext).bottom + 24,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Add'),
-          ),
-        ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'New tag',
+              style: Theme.of(sheetContext).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'Tag name'),
+              onSubmitted: (v) => Navigator.of(sheetContext).pop(v.trim()),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton(
+                onPressed: () =>
+                    Navigator.of(sheetContext).pop(controller.text.trim()),
+                child: const Text('Add'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
     if (name != null && name.isNotEmpty) {
@@ -338,7 +445,6 @@ class _TagRow extends ConsumerWidget {
       height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
           for (final t in tags)
             Padding(
@@ -368,16 +474,63 @@ class _TypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Color accentFor(TxType t) => switch (t) {
+      TxType.expense => scheme.expense,
+      TxType.income => scheme.income,
+      _ => scheme.primary,
+    };
+
     return Padding(
-      padding: const EdgeInsets.all(12),
-      child: SegmentedButton<TxType>(
-        segments: const [
-          ButtonSegment(value: TxType.expense, label: Text('Expense')),
-          ButtonSegment(value: TxType.income, label: Text('Income')),
-          ButtonSegment(value: TxType.transfer, label: Text('Transfer')),
-        ],
-        selected: {type},
-        onSelectionChanged: (s) => onChanged(s.first),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: ShapeDecoration(
+          color: scheme.surfaceContainer,
+          shape: RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Row(
+          children: [
+            for (final (t, label) in const [
+              (TxType.expense, 'Expense'),
+              (TxType.income, 'Income'),
+              (TxType.transfer, 'Transfer'),
+            ])
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onChanged(t),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    decoration: ShapeDecoration(
+                      color: t == type
+                          ? accentFor(t).withValues(alpha: 0.16)
+                          : Colors.transparent,
+                      shape: RoundedSuperellipseBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: t == type
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: t == type
+                              ? accentFor(t)
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -420,7 +573,6 @@ class _ChipsRow extends ConsumerWidget {
     final categories = ref.watch(categoryMapProvider);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
           ActionChip(

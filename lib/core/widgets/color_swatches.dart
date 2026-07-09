@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// The accent palette offered for accounts and categories.
 abstract final class AppColors {
@@ -54,7 +55,7 @@ class ColorSwatchPicker extends StatelessWidget {
                     : null,
               ),
               child: isSelected
-                  ? const Icon(Icons.check, color: Colors.white, size: 20)
+                  ? const Icon(LucideIcons.check, color: Colors.white, size: 20)
                   : null,
             ),
           );

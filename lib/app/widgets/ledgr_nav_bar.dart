@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// One destination in [LedgrNavBar].
 class LedgrNavItem {
@@ -160,7 +161,7 @@ class _NavFab extends StatelessWidget {
           foregroundColor: scheme.onHero,
           shape: const CircleBorder(),
           onPressed: onPressed,
-          child: const Icon(Icons.add, size: 26),
+          child: const Icon(LucideIcons.plus, size: 26),
         ),
       ),
     );

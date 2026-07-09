@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/app_icons.dart';
+import 'package:ledgr/core/widgets/group_card.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 
-/// Create a budget for a category (or overall).
+/// Create or edit a budget (overall or per category), as a full screen.
+/// (Kept as `BudgetFormSheet` with a `show` entry point so call sites are
+/// unchanged; it now pushes a full-screen dialog route.)
 class BudgetFormSheet extends ConsumerStatefulWidget {
   const BudgetFormSheet({this.budget, super.key});
 
   final Budget? budget;
 
   static Future<void> show(BuildContext context, {Budget? budget}) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => BudgetFormSheet(budget: budget),
+    return Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => BudgetFormSheet(budget: budget),
+      ),
     );
   }
 
@@ -77,56 +83,115 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     final categories =
         ref.watch(categoriesByKindProvider(CategoryKind.expense)).valueOrNull ??
         const [];
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      appBar: AppBar(
+        leading: const CloseButton(),
+        title: Text(_isEditing ? 'Edit budget' : 'New budget'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.xs, Gaps.page, 24),
         children: [
-          Text(
-            _isEditing ? 'Edit budget' : 'New budget',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          if (!_isEditing) ...[
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Overall')),
-                ButtonSegment(value: false, label: Text('Category')),
-              ],
-              selected: {_overall},
-              onSelectionChanged: (s) => setState(() => _overall = s.first),
-            ),
-            const SizedBox(height: 16),
-            if (!_overall)
-              DropdownButtonFormField<int>(
-                initialValue: _categoryId,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  for (final c in categories)
-                    DropdownMenuItem(value: c.id, child: Text(c.name)),
+          if (!_isEditing)
+            RadioGroup<bool>(
+              groupValue: _overall,
+              onChanged: (v) => setState(() => _overall = v ?? true),
+              child: const GroupCard(
+                title: 'What to limit',
+                children: [
+                  RadioListTile<bool>(
+                    value: true,
+                    title: Text('Overall'),
+                    subtitle: Text('All spending in the month'),
+                  ),
+                  RadioListTile<bool>(
+                    value: false,
+                    title: Text('Category'),
+                    subtitle: Text('One category only'),
+                  ),
                 ],
-                onChanged: (v) => setState(() => _categoryId = v),
               ),
-            const SizedBox(height: 16),
-          ],
-          MoneyField(
-            controller: _limit,
-            currency: settings.homeCurrency,
-            label: 'Monthly limit',
-            symbol: settings.currencySymbol,
+            ),
+          if (!_isEditing && !_overall)
+            GroupCard(
+              title: 'Category',
+              children: [
+                SizedBox(
+                  height: 260,
+                  child: GridView.count(
+                    crossAxisCount: 4,
+                    padding: const EdgeInsets.all(Gaps.md),
+                    children: [
+                      for (final c in categories)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => setState(() => _categoryId = c.id),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconBadge(
+                                icon: AppIcons.resolve(c.icon),
+                                color: Color(c.color),
+                                size: 40,
+                                iconSize: 18,
+                                background: _categoryId == c.id
+                                    ? Color(c.color).withValues(alpha: 0.32)
+                                    : Color(c.color).withValues(alpha: 0.10),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                c.name,
+                                style: text.labelSmall?.copyWith(
+                                  fontWeight: _categoryId == c.id
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                  color: _categoryId == c.id
+                                      ? scheme.onSurface
+                                      : scheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          GroupCard(
+            title: 'Limit',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Gaps.lg),
+                child: MoneyField(
+                  controller: _limit,
+                  currency: settings.homeCurrency,
+                  label: 'Monthly limit',
+                  symbol: settings.currencySymbol,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          FilledButton(
+        ],
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(
+          Gaps.page,
+          Gaps.sm,
+          Gaps.page,
+          Gaps.md,
+        ),
+        child: SizedBox(
+          height: 52,
+          child: FilledButton(
             onPressed: _save,
             child: Text(_isEditing ? 'Save' : 'Create budget'),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:ledgr/features/transactions/domain/transaction_filter.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Full filter editor for the search screen.
 class FilterSheet extends ConsumerStatefulWidget {
@@ -224,7 +225,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 ),
                 if (_draft.from != null)
                   IconButton(
-                    icon: const Icon(Icons.clear),
+                    icon: const Icon(LucideIcons.x),
                     onPressed: () => setState(
                       () => _draft = _draft.copyWith(clearDates: true),
                     ),
