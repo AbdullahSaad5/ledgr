@@ -6,6 +6,7 @@ import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 
 /// Compact account card showing icon, name, type, and current balance. Used in
 /// the dashboard carousel and the accounts list.
@@ -64,22 +65,14 @@ class AccountCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: ShapeDecoration(
-                      color: accent.withValues(alpha: isDark ? 0.28 : 0.16),
-                      shape: RoundedSuperellipseBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Icon(
-                      AppIcons.resolve(account.icon),
-                      size: 18,
-                      color: isDark
-                          ? Color.lerp(accent, Colors.white, 0.35)
-                          : Color.lerp(accent, Colors.black, 0.25),
-                    ),
+                  IconBadge(
+                    icon: AppIcons.resolve(account.icon),
+                    size: 36,
+                    iconSize: 18,
+                    background: accent.withValues(alpha: isDark ? 0.28 : 0.16),
+                    color: isDark
+                        ? Color.lerp(accent, Colors.white, 0.35)!
+                        : Color.lerp(accent, Colors.black, 0.25)!,
                   ),
                   const SizedBox(width: Gaps.md),
                   Expanded(

@@ -9,13 +9,18 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/animated_amount.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_header.dart';
 import 'package:ledgr/core/widgets/pressable.dart';
+import 'package:ledgr/core/widgets/section_header.dart';
+import 'package:ledgr/core/widgets/soft_icon_button.dart';
 import 'package:ledgr/features/accounts/presentation/account_form_sheet.dart';
 import 'package:ledgr/features/accounts/presentation/widgets/account_card.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// The dashboard: hero net-worth panel, accounts carousel, spending snapshot,
 /// and recent activity. Everything reads live from Drift streams.
@@ -36,34 +41,36 @@ class HomeScreen extends ConsumerWidget {
     final accountMap = ref.watch(accountMapProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.appName),
-        actions: [
-          IconButton(
-            tooltip: hidden ? 'Show amounts' : 'Hide amounts',
-            icon: Icon(hidden ? Icons.visibility_off : Icons.visibility),
-            onPressed: () => ref
-                .read(settingsControllerProvider.notifier)
-                .toggleAmountsHidden(),
-          ),
-          IconButton(
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push('/search'),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) => context.push('/$v'),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'debts', child: Text('Debts')),
-              PopupMenuItem(value: 'recurring', child: Text('Recurring')),
-              PopupMenuItem(value: 'upcoming', child: Text('Upcoming')),
-              PopupMenuItem(value: 'settings', child: Text('Settings')),
-            ],
-          ),
-        ],
-      ),
       body: ListView(
         children: [
+          LedgrHeader(
+            title: l10n.appName,
+            showLogo: true,
+            actions: [
+              SoftIconButton(
+                icon: hidden ? LucideIcons.eyeOff : LucideIcons.eye,
+                tooltip: hidden ? 'Show amounts' : 'Hide amounts',
+                onPressed: () => ref
+                    .read(settingsControllerProvider.notifier)
+                    .toggleAmountsHidden(),
+              ),
+              SoftIconButton(
+                icon: LucideIcons.search,
+                tooltip: 'Search',
+                onPressed: () => context.push('/search'),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (v) => context.push('/$v'),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'debts', child: Text('Debts')),
+                  PopupMenuItem(value: 'recurring', child: Text('Recurring')),
+                  PopupMenuItem(value: 'upcoming', child: Text('Upcoming')),
+                  PopupMenuItem(value: 'settings', child: Text('Settings')),
+                ],
+                child: const SoftIconButton(icon: LucideIcons.moreVertical),
+              ),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               Gaps.page,
@@ -73,13 +80,16 @@ class HomeScreen extends ConsumerWidget {
             ),
             child: _HeroPanel(formatter: formatter, currency: currency),
           ),
-          const _SectionHeader(title: 'Accounts', route: '/accounts'),
+          SectionHeader(
+            title: 'Accounts',
+            onAction: () => context.push('/accounts'),
+          ),
           const _AccountsCarousel(),
           _SpendingSnapshot(formatter: formatter, currency: currency),
           _BudgetsSnapshot(formatter: formatter, currency: currency),
-          const _SectionHeader(
+          SectionHeader(
             title: 'Recent activity',
-            route: '/transactions',
+            onAction: () => context.push('/transactions'),
           ),
           if (recent.isEmpty)
             Padding(
@@ -111,7 +121,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-          const SizedBox(height: 96),
+          const SizedBox(height: 120),
         ],
       ),
     );
@@ -205,7 +215,7 @@ class _HeroPanel extends ConsumerWidget {
               children: [
                 _HeroStat(
                   label: 'Spent',
-                  icon: Icons.south,
+                  icon: LucideIcons.arrowDownLeft,
                   iconColor: const Color(0xFFFF9E8F),
                   money: Money(
                     minor: totals?.expenseMinor ?? 0,
@@ -216,7 +226,7 @@ class _HeroPanel extends ConsumerWidget {
                 const SizedBox(width: Gaps.xxl),
                 _HeroStat(
                   label: 'Received',
-                  icon: Icons.north,
+                  icon: LucideIcons.arrowUpRight,
                   iconColor: const Color(0xFF7DE8AE),
                   money: Money(
                     minor: totals?.incomeMinor ?? 0,
@@ -253,16 +263,12 @@ class _HeroStat extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Row(
       children: [
-        Container(
-          width: 30,
-          height: 30,
-          decoration: ShapeDecoration(
-            color: Colors.white.withValues(alpha: 0.10),
-            shape: RoundedSuperellipseBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Icon(icon, size: 16, color: iconColor),
+        IconBadge(
+          icon: icon,
+          color: iconColor,
+          size: 30,
+          iconSize: 16,
+          background: Colors.white.withValues(alpha: 0.10),
         ),
         const SizedBox(width: 10),
         Column(
@@ -377,31 +383,6 @@ class _HeroBudgetRead extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.route});
-
-  final String title;
-  final String? route;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.xl, Gaps.md, Gaps.sm),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          if (route != null)
-            TextButton(
-              onPressed: () => context.push(route!),
-              child: const Text('See all'),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _AccountsCarousel extends ConsumerWidget {
   const _AccountsCarousel();
 
@@ -467,7 +448,10 @@ class _SpendingSnapshot extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Spending', route: '/reports'),
+        SectionHeader(
+          title: 'Spending',
+          onAction: () => context.push('/reports'),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Gaps.page),
           child: Pressable(
@@ -567,7 +551,10 @@ class _BudgetsSnapshot extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Budgets', route: '/budgets'),
+        SectionHeader(
+          title: 'Budgets',
+          onAction: () => context.push('/budgets'),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Gaps.page),
           child: Card(
@@ -686,7 +673,7 @@ class _AddAccountCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add, color: scheme.primary),
+                Icon(LucideIcons.plus, color: scheme.primary),
                 const SizedBox(height: Gaps.sm),
                 Text(
                   'Add account',

@@ -18,30 +18,31 @@ abstract final class AppTheme {
   static ThemeData dark(ColorScheme? dynamicScheme, {Color? fallbackSeed}) =>
       _themeFor(dynamicScheme ?? _darkScheme(fallbackSeed ?? seedColor));
 
-  /// Warm paper: near-white warm surfaces, ink text, deep teal primary.
+  /// Fresh mint-neutral light: cool off-white surfaces, white cards, and a
+  /// teal-green primary.
   static ColorScheme _lightScheme(Color seed) {
     final base = ColorScheme.fromSeed(seedColor: seed);
     // Only re-skin the neutrals when the user kept the brand seed; a custom
     // seed color keeps its own harmonized neutrals.
     if (seed != seedColor) return base;
     return base.copyWith(
-      primary: const Color(0xFF00696D),
+      primary: const Color(0xFF0A6B60),
       onPrimary: Colors.white,
-      primaryContainer: const Color(0xFFCBEAE9),
-      onPrimaryContainer: const Color(0xFF00373A),
-      surface: const Color(0xFFF7F5F1),
-      onSurface: const Color(0xFF1A1C1C),
-      onSurfaceVariant: const Color(0xFF52595A),
+      primaryContainer: const Color(0xFFBDEBE0),
+      onPrimaryContainer: const Color(0xFF00332C),
+      surface: const Color(0xFFF2F5F3),
+      onSurface: const Color(0xFF17201D),
+      onSurfaceVariant: const Color(0xFF48554F),
       surfaceContainerLowest: Colors.white,
-      surfaceContainerLow: const Color(0xFFFDFCF9),
-      surfaceContainer: const Color(0xFFF1EEE9),
-      surfaceContainerHigh: const Color(0xFFEBE8E2),
-      surfaceContainerHighest: const Color(0xFFE4E1DB),
-      outlineVariant: const Color(0xFFE2DED6),
+      surfaceContainerLow: const Color(0xFFFCFEFD),
+      surfaceContainer: const Color(0xFFE9EFEC),
+      surfaceContainerHigh: const Color(0xFFE1E8E5),
+      surfaceContainerHighest: const Color(0xFFD9E2DE),
+      outlineVariant: const Color(0xFFDDE5E1),
     );
   }
 
-  /// Teal-tinted ink: layered near-black surfaces, minty primary.
+  /// Soft graphite-teal dark: lifted, tinted grays rather than pitch black.
   static ColorScheme _darkScheme(Color seed) {
     final base = ColorScheme.fromSeed(
       seedColor: seed,
@@ -49,19 +50,19 @@ abstract final class AppTheme {
     );
     if (seed != seedColor) return base;
     return base.copyWith(
-      primary: const Color(0xFF56D9CD),
-      onPrimary: const Color(0xFF003735),
-      primaryContainer: const Color(0xFF0E4F4F),
-      onPrimaryContainer: const Color(0xFFAFF0EA),
-      surface: const Color(0xFF0C1213),
-      onSurface: const Color(0xFFE3E7E6),
-      onSurfaceVariant: const Color(0xFF9AA6A5),
-      surfaceContainerLowest: const Color(0xFF080D0E),
-      surfaceContainerLow: const Color(0xFF111819),
-      surfaceContainer: const Color(0xFF151D1E),
-      surfaceContainerHigh: const Color(0xFF1B2526),
-      surfaceContainerHighest: const Color(0xFF223031),
-      outlineVariant: const Color(0xFF243132),
+      primary: const Color(0xFF5BD9C8),
+      onPrimary: const Color(0xFF00332C),
+      primaryContainer: const Color(0xFF10514B),
+      onPrimaryContainer: const Color(0xFFB2F0E4),
+      surface: const Color(0xFF151E1C),
+      onSurface: const Color(0xFFE4EAE7),
+      onSurfaceVariant: const Color(0xFFA0ACA7),
+      surfaceContainerLowest: const Color(0xFF101816),
+      surfaceContainerLow: const Color(0xFF1B2523),
+      surfaceContainer: const Color(0xFF212C29),
+      surfaceContainerHigh: const Color(0xFF273330),
+      surfaceContainerHighest: const Color(0xFF2E3B37),
+      outlineVariant: const Color(0xFF2C3936),
     );
   }
 
@@ -264,8 +265,8 @@ extension MoneyColors on ColorScheme {
   List<Color> get heroGradient {
     final anchor = brightness == Brightness.dark ? primaryContainer : primary;
     return [
-      Color.lerp(anchor, const Color(0xFF06181A), 0.35)!,
-      Color.lerp(anchor, const Color(0xFF04090A), 0.72)!,
+      Color.lerp(anchor, const Color(0xFF0A2724), 0.30)!,
+      Color.lerp(anchor, const Color(0xFF071614), 0.65)!,
     ];
   }
 

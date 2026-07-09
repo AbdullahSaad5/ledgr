@@ -6,6 +6,8 @@ import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/money/money_x.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// A single transaction row (transactions list + account history).
 class TransactionTile extends StatelessWidget {
@@ -40,12 +42,12 @@ class TransactionTile extends StatelessWidget {
 
     final (IconData icon, Color tint, String title) = switch (t.type) {
       TxType.transfer => (
-        Icons.swap_horiz,
+        LucideIcons.arrowLeftRight,
         scheme.transfer,
         t.payee ?? 'Transfer',
       ),
       TxType.adjustment => (
-        Icons.tune,
+        LucideIcons.slidersHorizontal,
         scheme.onSurfaceVariant,
         t.note ?? 'Adjustment',
       ),
@@ -76,19 +78,13 @@ class TransactionTile extends StatelessWidget {
       onLongPress: onLongPress,
       selected: selected,
       selectedTileColor: scheme.primaryContainer.withValues(alpha: 0.4),
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: ShapeDecoration(
-          color: selected ? scheme.primary : tint.withValues(alpha: 0.14),
-          shape: RoundedSuperellipseBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: selected
-            ? Icon(Icons.check, color: scheme.onPrimary)
-            : Icon(icon, size: 20, color: tint),
-      ),
+      leading: selected
+          ? IconBadge.filled(
+              icon: LucideIcons.check,
+              fill: scheme.primary,
+              onColor: scheme.onPrimary,
+            )
+          : IconBadge(icon: icon, color: tint, iconSize: 20),
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: subtitle.isEmpty ? null : Text(subtitle),
       trailing: AmountText(
