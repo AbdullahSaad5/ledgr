@@ -1,0 +1,22 @@
+{
+  "@@locale": "en",
+  "appName": "Ledgr",
+  "@appName": { "description": "Application name" },
+
+  "navHome": "Home",
+  "navTransactions": "Transactions",
+  "navBudgets": "Budgets",
+  "navReports": "Reports",
+  "navAdd": "Add",
+
+  "dashboardTitle": "Home",
+  "netWorthLabel": "Net worth",
+  "emptyDashboardTitle": "Nothing here yet",
+  "emptyDashboardBody": "Add your first account to get started.",
+
+  "transactionsTitle": "Transactions",
+  "budgetsTitle": "Budgets",
+  "reportsTitle": "Reports",
+
+  "comingSoon": "Coming soon"
+}

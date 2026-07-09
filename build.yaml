@@ -1,0 +1,10 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # Deterministic snake_case SQL identifiers (raw queries rely on this).
+          case_from_dart_to_sql: snake_case
+          # Portable, sync-friendly timestamps.
+          store_date_time_values_as_text: true
+          named_parameters: true

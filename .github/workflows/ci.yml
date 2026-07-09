@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.5
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify generated code is up to date
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          if [ -n "$(git status --porcelain '*.g.dart' '*.freezed.dart')" ]; then
+            echo "::error::Generated code is stale. Run build_runner and commit."
+            git --no-pager diff -- '*.g.dart' '*.freezed.dart'
+            exit 1
+          fi
+
+      - name: Generate localizations
+        run: flutter gen-l10n
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test with coverage
+        run: flutter test --coverage
+
+      - name: Coverage gate (80%)
+        run: dart run tool/check_coverage.dart

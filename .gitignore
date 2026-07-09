@@ -12,6 +12,8 @@ build/
 .vscode/
 
 # Codegen output is committed (drift/freezed) — do NOT ignore *.g.dart / *.freezed.dart
+# Localizations are regenerated (CI runs `flutter gen-l10n`).
+lib/l10n/generated/
 
 # Android
 android/.gradle/

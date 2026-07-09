@@ -4,7 +4,15 @@ Personal finance & balance tracker. Flutter, Android-first, offline-first foreve
 
 ## Current state
 
-Pre-code. The repo contains the full plan, domain docs, and ADRs. Work is driven by the wayfinder map — issue [#1](https://github.com/AbdullahSaad5/ledgr/issues/1) — whose sub-issues #2–#13 chain the M0–M7 build (PLAN.md §10) plus open decisions. Claim the first open, unblocked, unassigned ticket; one ticket per session.
+**M0 landed** (issue #6): Flutter app scaffolded, three pure-logic cores TDD'd (Money, keypad expression evaluator, PeriodResolver), full Drift schema with ADR-0005 sync columns + seed, Material 3 app shell (go_router bottom-nav + FAB, dynamic color, l10n), and CI (analyze + test + 80% coverage gate). 75 tests, analyze clean, coverage 92.8%.
+
+Next frontier ticket: **M1** (issue #7) — accounts + transactions core. Work is driven by the wayfinder map — issue [#1](https://github.com/AbdullahSaad5/ledgr/issues/1) — whose sub-issues #2–#13 chain the M0–M7 build (PLAN.md §10) plus open decisions. Claim the first open, unblocked, unassigned ticket; one ticket per session.
+
+### Deviations from PLAN.md §2 (recorded during M0)
+- **Riverpod codegen dropped**: `riverpod_generator` transitively pulls a `custom_lint_core`/`analyzer_plugin` incompatible with the current analyzer, breaking build_runner. Using **classic Riverpod providers** (still Riverpod 2) instead of `@riverpod`. Revisit if the ecosystem conflict clears.
+- **Money is hand-written, not freezed** (ADR-0002 amendment): behavior-rich value type kept codegen-free for an instant test loop.
+- Feature-specific platform plugins (local_auth, notifications, workmanager, secure_storage) are declared in pubspec but wired up in their own milestones (M3–M5).
+- **`file_picker` + `image_picker` removed for now**: their Android modules compile against API 34 while a transitive dep (`flutter_plugin_android_lifecycle`) now requires 36, failing the AAR metadata check. Re-add at M5 (backup import / receipt photos) using versions compiled against 36, or add a root-Gradle `subprojects` compileSdk override. App `compileSdk` is pinned to **36** in `android/app/build.gradle.kts`; **core library desugaring** is enabled there for `flutter_local_notifications`.
 
 ## What Ledgr is (30 seconds)
 

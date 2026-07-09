@@ -1,0 +1,21 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "lib/l10n/generated/**"
+    - "lib/**/*.gen.dart"
+  errors:
+    # Codegen (freezed/json) emits annotations the analyzer flags on fields.
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    # Feature-first layout uses short relative imports within lib/.
+    always_use_package_imports: false
+    public_member_api_docs: false
+    # Fights `flutter pub add`, which appends rather than sorts.
+    sort_pub_dependencies: false
+    # Explicit arguments are kept in tests for readability.
+    avoid_redundant_argument_values: false
