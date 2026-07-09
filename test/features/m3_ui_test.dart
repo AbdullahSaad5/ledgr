@@ -110,10 +110,13 @@ void main() {
     expect(find.text('Expense'), findsOneWidget);
     expect(find.byType(PieChart), findsOneWidget);
 
-    // Trends tab renders a bar chart.
+    // Trends tab: with a single month of data it shows insight tiles
+    // (the month-on-month bar chart needs two active months).
     await tester.tap(find.text('Trends'));
     await tester.pumpAndSettle();
-    expect(find.byType(BarChart), findsOneWidget);
+    expect(find.text('Daily average'), findsOneWidget);
+    expect(find.text('Biggest expense'), findsOneWidget);
+    expect(find.byType(BarChart), findsNothing);
 
     // Net worth tab renders a line chart.
     await tester.tap(find.text('Net worth'));

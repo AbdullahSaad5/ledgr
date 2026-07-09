@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/db/database.dart';
+import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -11,11 +13,13 @@ import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/insight_tile.dart';
 import 'package:ledgr/core/widgets/ledgr_header.dart';
 import 'package:ledgr/core/widgets/period_switcher.dart';
 import 'package:ledgr/core/widgets/section_header.dart';
 import 'package:ledgr/core/widgets/soft_icon_button.dart';
 import 'package:ledgr/core/widgets/stat_card.dart';
+import 'package:ledgr/features/reports/domain/report_models.dart';
 import 'package:ledgr/features/reports/presentation/report_export.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -299,10 +303,55 @@ class _TrendsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trend = ref.watch(monthlyTrendProvider);
+    final txs = ref.watch(periodTransactionsProvider).valueOrNull ?? const [];
+    final spend = ref.watch(spendByCategoryProvider).valueOrNull ?? const [];
+    final budgets = ref.watch(budgetProgressProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoryMapProvider);
+    final period = ref.watch(selectedPeriodProvider);
     final formatter = ref.watch(moneyFormatterProvider);
     final currency = ref.watch(appSettingsProvider).homeCurrency;
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+
+    // --- This period's insights, computed from live data. ---
+    final now = DateTime.now();
+    final periodEnded = now.isAfter(period.end);
+    final elapsedDays = periodEnded
+        ? period.end.difference(period.start).inDays
+        : now.difference(period.start).inDays + 1;
+    final totalDays = period.end.difference(period.start).inDays;
+    final spentMinor = txs
+        .where((t) => t.type == TxType.expense)
+        .fold(0, (sum, t) => sum + t.amountMinor);
+    final dailyAvg = elapsedDays <= 0 ? 0 : spentMinor ~/ elapsedDays;
+    final projected = periodEnded ? spentMinor : dailyAvg * totalDays;
+
+    Transaction? biggest;
+    for (final t in txs) {
+      if (t.type != TxType.expense) continue;
+      if (biggest == null || t.amountMinor > biggest.amountMinor) biggest = t;
+    }
+
+    final overallMatches = budgets.where((b) => b.isOverall);
+    final overall = overallMatches.isEmpty ? null : overallMatches.first;
+    String? projectionCaption;
+    Color? projectionAccent;
+    if (overall != null && overall.limitMinor > 0 && !periodEnded) {
+      final over = projected > overall.limitMinor;
+      projectionCaption = over
+          ? 'On pace to exceed your budget'
+          : 'On pace to stay under budget';
+      projectionAccent = over ? scheme.expense : scheme.income;
+    }
+
+    final topCategory = spend.isEmpty ? null : spend.first;
+    final spendTotal = spend.fold(0, (sum, e) => sum + e.totalMinor);
+    final topShare = topCategory == null || spendTotal == 0
+        ? 0
+        : (topCategory.totalMinor / spendTotal * 100).round();
+
+    String money(int minor) =>
+        formatter.format(Money(minor: minor, currency: currency));
 
     return trend.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -311,51 +360,94 @@ class _TrendsTab extends ConsumerWidget {
         final active = points
             .where((p) => p.incomeMinor != 0 || p.expenseMinor != 0)
             .toList();
-        if (active.isEmpty) {
-          return const EmptyState(
-            icon: LucideIcons.barChart3,
-            title: 'No history yet',
-            message: 'Once you log a few months, trends show up here.',
-          );
-        }
-        final totalSpent = active.fold(0, (s, p) => s + p.expenseMinor);
-        final avgSpent = totalSpent ~/ active.length;
-        final maxVal = points.fold<double>(
-          1,
-          (m, p) => [
-            m,
-            p.incomeMinor.toDouble(),
-            p.expenseMinor.toDouble(),
-          ].reduce((a, b) => a > b ? a : b),
-        );
 
         return ListView(
-          padding: const EdgeInsets.only(top: Gaps.md, bottom: 120),
+          padding: const EdgeInsets.fromLTRB(
+            Gaps.page,
+            Gaps.md,
+            Gaps.page,
+            120,
+          ),
           children: [
-            StatCard(
-              formatter: formatter,
-              items: [
-                StatItem(
-                  label: 'Avg spent / month',
-                  money: Money(minor: avgSpent, currency: currency),
-                  tone: AmountTone.expense,
-                ),
-                StatItem(
-                  label: 'Avg saved / month',
-                  money: Money(
-                    minor:
-                        active.fold(0, (s, p) => s + p.netMinor) ~/
-                        active.length,
-                    currency: currency,
+            if (txs.isEmpty && active.isEmpty)
+              const EmptyState(
+                icon: LucideIcons.barChart3,
+                title: 'No insights yet',
+                message: 'Log a few expenses and this fills up.',
+              )
+            else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: InsightTile(
+                      icon: LucideIcons.calendarDays,
+                      label: 'Daily average',
+                      value: money(dailyAvg),
+                      caption:
+                          'Over $elapsedDays day'
+                          '${elapsedDays == 1 ? '' : 's'} so far',
+                    ),
                   ),
-                  tone: AmountTone.auto,
-                ),
-              ],
-            ),
-            const SectionHeader(title: 'Income vs expense'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Gaps.page),
-              child: Card(
+                  const SizedBox(width: Gaps.md),
+                  Expanded(
+                    child: InsightTile(
+                      icon: LucideIcons.trendingUp,
+                      label: periodEnded ? 'Total spent' : 'Projected total',
+                      value: money(projected),
+                      caption:
+                          projectionCaption ??
+                          (periodEnded
+                              ? 'This period is over'
+                              : 'At your current pace'),
+                      accent: projectionAccent,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Gaps.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: InsightTile(
+                      icon: LucideIcons.receipt,
+                      label: 'Biggest expense',
+                      value: biggest == null ? '—' : money(biggest.amountMinor),
+                      caption: biggest == null
+                          ? 'Nothing this period'
+                          : (biggest.payee ??
+                                categories[biggest.categoryId]?.name ??
+                                'Uncategorized'),
+                    ),
+                  ),
+                  const SizedBox(width: Gaps.md),
+                  Expanded(
+                    child: InsightTile(
+                      icon: LucideIcons.shapes,
+                      label: 'Top category',
+                      value: topCategory == null
+                          ? '—'
+                          : categories[topCategory.categoryId]?.name ?? 'Other',
+                      caption: topCategory == null || spendTotal == 0
+                          ? 'Nothing categorized yet'
+                          : '$topShare% of spending '
+                                '(${money(topCategory.totalMinor)})',
+                      accent: topCategory == null
+                          ? null
+                          : Color(
+                              categories[topCategory.categoryId]?.color ??
+                                  0xFF9E9E9E,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            // The month-on-month chart earns its place only once there is
+            // more than one month to compare.
+            if (active.length >= 2) ...[
+              const SizedBox(height: Gaps.sm),
+              const SectionHeader(title: 'Month by month'),
+              Card(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     Gaps.sm,
@@ -363,145 +455,191 @@ class _TrendsTab extends ConsumerWidget {
                     Gaps.lg,
                     Gaps.lg,
                   ),
-                  child: Column(
+                  child: _MonthBars(
+                    points: active.length > 6
+                        ? active.sublist(active.length - 6)
+                        : active,
+                    formatter: formatter,
+                    currency: currency,
+                  ),
+                ),
+              ),
+            ] else if (txs.isNotEmpty) ...[
+              const SizedBox(height: Gaps.md),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(Gaps.lg),
+                  child: Row(
                     children: [
-                      SizedBox(
-                        height: 220,
-                        child: BarChart(
-                          BarChartData(
-                            maxY: maxVal * 1.15,
-                            barTouchData: BarTouchData(
-                              touchTooltipData: BarTouchTooltipData(
-                                getTooltipColor: (_) =>
-                                    scheme.surfaceContainerHighest,
-                                getTooltipItem:
-                                    (group, groupIndex, rod, rodIndex) {
-                                      final p = points[group.x];
-                                      final label = rodIndex == 0
-                                          ? 'In'
-                                          : 'Out';
-                                      final minor = rodIndex == 0
-                                          ? p.incomeMinor
-                                          : p.expenseMinor;
-                                      final money = formatter.format(
-                                        Money(minor: minor, currency: currency),
-                                      );
-                                      return BarTooltipItem(
-                                        '$label $money',
-                                        text.labelMedium!.copyWith(
-                                          color: scheme.onSurface,
-                                        ),
-                                      );
-                                    },
-                              ),
-                            ),
-                            titlesData: FlTitlesData(
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 40,
-                                  interval: maxVal <= 1 ? 1 : maxVal / 3,
-                                  getTitlesWidget: (value, meta) => Text(
-                                    _compactMinor(value.toInt()),
-                                    style: text.labelSmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: (value, meta) {
-                                    final i = value.toInt();
-                                    if (i < 0 || i >= points.length) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    if (points.length > 6 && i.isOdd) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        DateFormat.MMM().format(
-                                          DateTime(
-                                            points[i].year,
-                                            points[i].month,
-                                          ),
-                                        ),
-                                        style: text.labelSmall?.copyWith(
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            gridData: FlGridData(
-                              drawVerticalLine: false,
-                              horizontalInterval: maxVal <= 1 ? 1 : maxVal / 3,
-                              getDrawingHorizontalLine: (v) => FlLine(
-                                color: scheme.outlineVariant,
-                                strokeWidth: 1,
-                                dashArray: [4, 4],
-                              ),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            barGroups: [
-                              for (var i = 0; i < points.length; i++)
-                                BarChartGroupData(
-                                  x: i,
-                                  barsSpace: 2,
-                                  barRods: [
-                                    BarChartRodData(
-                                      toY: points[i].incomeMinor.toDouble(),
-                                      color: scheme.income,
-                                      width: 6,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                    BarChartRodData(
-                                      toY: points[i].expenseMinor.toDouble(),
-                                      color: scheme.expense,
-                                      width: 6,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                  ],
-                                ),
-                            ],
+                      Icon(
+                        LucideIcons.barChart3,
+                        size: 18,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: Gaps.md),
+                      Expanded(
+                        child: Text(
+                          'Month-on-month trends appear after your second '
+                          'month of data.',
+                          style: text.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: Gaps.md),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _legend(context, scheme.income, 'Income'),
-                          const SizedBox(width: Gaps.lg),
-                          _legend(context, scheme.expense, 'Expense'),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tap a bar for the exact amount',
-                        style: text.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         );
       },
+    );
+  }
+}
+
+/// Income vs expense bars over the months that actually have data —
+/// every month labelled, tooltips on tap.
+class _MonthBars extends StatelessWidget {
+  const _MonthBars({
+    required this.points,
+    required this.formatter,
+    required this.currency,
+  });
+
+  final List<MonthPoint> points;
+  final MoneyFormatter formatter;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final maxVal = points.fold<double>(
+      1,
+      (m, p) => [
+        m,
+        p.incomeMinor.toDouble(),
+        p.expenseMinor.toDouble(),
+      ].reduce((a, b) => a > b ? a : b),
+    );
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 210,
+          child: BarChart(
+            BarChartData(
+              maxY: maxVal * 1.15,
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => scheme.surfaceContainerHighest,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final p = points[group.x];
+                    final label = rodIndex == 0 ? 'In' : 'Out';
+                    final minor = rodIndex == 0
+                        ? p.incomeMinor
+                        : p.expenseMinor;
+                    final money = formatter.format(
+                      Money(minor: minor, currency: currency),
+                    );
+                    return BarTooltipItem(
+                      '$label $money',
+                      text.labelMedium!.copyWith(color: scheme.onSurface),
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 42,
+                    interval: maxVal <= 1 ? 1 : maxVal / 3,
+                    getTitlesWidget: (value, meta) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Text(
+                        _compactMinor(value.toInt()),
+                        style: text.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      final i = value.toInt();
+                      if (i < 0 || i >= points.length) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          DateFormat.MMM().format(
+                            DateTime(points[i].year, points[i].month),
+                          ),
+                          style: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              gridData: FlGridData(
+                drawVerticalLine: false,
+                horizontalInterval: maxVal <= 1 ? 1 : maxVal / 3,
+                getDrawingHorizontalLine: (v) => FlLine(
+                  color: scheme.outlineVariant,
+                  strokeWidth: 1,
+                  dashArray: [4, 4],
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: [
+                for (var i = 0; i < points.length; i++)
+                  BarChartGroupData(
+                    x: i,
+                    barsSpace: 3,
+                    barRods: [
+                      BarChartRodData(
+                        toY: points[i].incomeMinor.toDouble(),
+                        color: scheme.income,
+                        width: 9,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      BarChartRodData(
+                        toY: points[i].expenseMinor.toDouble(),
+                        color: scheme.expense,
+                        width: 9,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: Gaps.md),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _legend(context, scheme.income, 'Income'),
+            const SizedBox(width: Gaps.lg),
+            _legend(context, scheme.expense, 'Expense'),
+          ],
+        ),
+      ],
     );
   }
 
@@ -543,158 +681,158 @@ class _NetWorthTab extends ConsumerWidget {
           );
         }
         final current = points.last.minor;
-        final first = points.first.minor;
-        final delta = current - first;
+        final delta = current - points.first.minor;
         final up = delta >= 0;
         final deltaColor = up ? scheme.income : scheme.expense;
+        final deltaMoney = formatter.format(
+          Money(minor: delta.abs(), currency: currency),
+        );
 
         return ListView(
-          padding: const EdgeInsets.only(top: Gaps.md, bottom: 120),
+          padding: const EdgeInsets.fromLTRB(
+            Gaps.page,
+            Gaps.md,
+            Gaps.page,
+            120,
+          ),
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Gaps.page),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(Gaps.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Net worth today',
-                        style: text.labelMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(Gaps.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Net worth today',
+                      style: text.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          AmountText(
-                            Money(minor: current, currency: currency),
-                            formatter: formatter,
-                            style: text.headlineSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: AmountText(
+                        Money(minor: current, currency: currency),
+                        formatter: formatter,
+                        style: text.headlineSmall,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          up
+                              ? LucideIcons.arrowUpRight
+                              : LucideIcons.arrowDownLeft,
+                          size: 14,
+                          color: deltaColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '$deltaMoney over ${points.length} months',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.labelSmall?.copyWith(
+                              color: deltaColor,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          const SizedBox(width: Gaps.md),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 3),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  up
-                                      ? LucideIcons.arrowUpRight
-                                      : LucideIcons.arrowDownLeft,
-                                  size: 14,
-                                  color: deltaColor,
-                                ),
-                                Text(
-                                  _deltaLabel(
-                                    formatter,
-                                    delta,
-                                    currency,
-                                    points.length,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: Gaps.xl),
+                    SizedBox(
+                      height: 200,
+                      child: LineChart(
+                        LineChartData(
+                          lineTouchData: LineTouchData(
+                            touchTooltipData: LineTouchTooltipData(
+                              getTooltipColor: (_) =>
+                                  scheme.surfaceContainerHighest,
+                              getTooltipItems: (spots) => [
+                                for (final spot in spots)
+                                  LineTooltipItem(
+                                    formatter.format(
+                                      Money(
+                                        minor: spot.y.toInt(),
+                                        currency: currency,
+                                      ),
+                                    ),
+                                    text.labelMedium!.copyWith(
+                                      color: scheme.onSurface,
+                                    ),
                                   ),
-                                  style: text.labelSmall?.copyWith(
-                                    color: deltaColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: Gaps.xl),
-                      SizedBox(
-                        height: 200,
-                        child: LineChart(
-                          LineChartData(
-                            lineTouchData: LineTouchData(
-                              touchTooltipData: LineTouchTooltipData(
-                                getTooltipColor: (_) =>
-                                    scheme.surfaceContainerHighest,
-                                getTooltipItems: (spots) => [
-                                  for (final spot in spots)
-                                    LineTooltipItem(
-                                      formatter.format(
-                                        Money(
-                                          minor: spot.y.toInt(),
-                                          currency: currency,
-                                        ),
-                                      ),
-                                      text.labelMedium!.copyWith(
-                                        color: scheme.onSurface,
+                          titlesData: FlTitlesData(
+                            leftTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                interval: (points.length / 4)
+                                    .ceilToDouble()
+                                    .clamp(1, 12),
+                                getTitlesWidget: (value, meta) {
+                                  final i = value.toInt();
+                                  if (i < 0 || i >= points.length) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      DateFormat.MMM().format(points[i].date),
+                                      style: text.labelSmall?.copyWith(
+                                        color: scheme.onSurfaceVariant,
                                       ),
                                     ),
-                                ],
+                                  );
+                                },
                               ),
                             ),
-                            titlesData: FlTitlesData(
-                              leftTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: (points.length / 4)
-                                      .ceilToDouble()
-                                      .clamp(1, 12),
-                                  getTitlesWidget: (value, meta) {
-                                    final i = value.toInt();
-                                    if (i < 0 || i >= points.length) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        DateFormat.MMM().format(points[i].date),
-                                        style: text.labelSmall?.copyWith(
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            gridData: const FlGridData(show: false),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                isCurved: true,
-                                color: scheme.primary,
-                                barWidth: 3,
-                                dotData: const FlDotData(show: false),
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      scheme.primary.withValues(alpha: 0.22),
-                                      scheme.primary.withValues(alpha: 0),
-                                    ],
-                                  ),
-                                ),
-                                spots: [
-                                  for (var i = 0; i < points.length; i++)
-                                    FlSpot(
-                                      i.toDouble(),
-                                      points[i].minor.toDouble(),
-                                    ),
-                                ],
-                              ),
-                            ],
                           ),
+                          gridData: const FlGridData(show: false),
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            LineChartBarData(
+                              isCurved: true,
+                              preventCurveOverShooting: true,
+                              color: scheme.primary,
+                              barWidth: 3,
+                              dotData: const FlDotData(show: false),
+                              belowBarData: BarAreaData(
+                                show: true,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    scheme.primary.withValues(alpha: 0.22),
+                                    scheme.primary.withValues(alpha: 0),
+                                  ],
+                                ),
+                              ),
+                              spots: [
+                                for (var i = 0; i < points.length; i++)
+                                  FlSpot(
+                                    i.toDouble(),
+                                    points[i].minor.toDouble(),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -703,16 +841,6 @@ class _NetWorthTab extends ConsumerWidget {
       },
     );
   }
-}
-
-String _deltaLabel(
-  MoneyFormatter formatter,
-  int delta,
-  String currency,
-  int months,
-) {
-  final money = formatter.format(Money(minor: delta.abs(), currency: currency));
-  return '$money over $months months';
 }
 
 /// Compact axis label for minor units: 150000 minor (Rs 1,500.00) → "1.5K".
