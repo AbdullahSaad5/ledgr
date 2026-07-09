@@ -73,6 +73,7 @@ dev_dependencies:
   freezed: ^2.5.7
   json_serializable: ^6.9.0
   very_good_analysis: ^7.0.0
+  flutter_native_splash: ^2.4.8
 flutter:
 
   # The following line ensures that the Material Icons font is
@@ -111,3 +112,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Native splash: brand color only for now; a logo lands with the visual
+# identity (issue #2). Regenerate with: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#00696D"
+  color_dark: "#00363A"
+  android_12:
+    color: "#00696D"
+    color_dark: "#00363A"

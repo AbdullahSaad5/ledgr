@@ -38,8 +38,7 @@ Widget _wrap(Widget child, {required _FakeLock lock, bool locked = false}) {
   return ProviderScope(
     overrides: [
       appLockServiceProvider.overrideWithValue(lock),
-      if (locked)
-        settingsControllerProvider.overrideWith(_LockedSettings.new),
+      if (locked) settingsControllerProvider.overrideWith(_LockedSettings.new),
     ],
     child: MaterialApp(home: child),
   );

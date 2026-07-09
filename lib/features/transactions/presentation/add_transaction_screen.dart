@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
@@ -134,6 +135,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       id = await repo.create(draft);
     }
     await ref.read(tagRepositoryProvider).setTagsForTransaction(id, _tagIds);
+    await HapticFeedback.mediumImpact();
 
     if (draft.type == TxType.expense) {
       final period = ref

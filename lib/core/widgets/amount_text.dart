@@ -41,8 +41,14 @@ class AmountText extends ConsumerWidget {
     };
     final prefix = showPlus && money.isPositive ? '+' : '';
     final text = hidden ? '••••' : '$prefix${formatter.format(money)}';
+    final toneLabel = switch (tone) {
+      AmountTone.income => 'income, ',
+      AmountTone.expense => 'expense, ',
+      _ => '',
+    };
     return Text(
       text,
+      semanticsLabel: hidden ? 'Amount hidden' : '$toneLabel$text',
       style: (style ?? DefaultTextStyle.of(context).style).copyWith(
         color: color,
         fontFeatures: const [FontFeature.tabularFigures()],

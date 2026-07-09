@@ -6,6 +6,7 @@ import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
+import 'package:ledgr/core/widgets/animated_amount.dart';
 import 'package:ledgr/features/accounts/presentation/account_form_sheet.dart';
 import 'package:ledgr/features/accounts/presentation/widgets/account_card.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
@@ -56,7 +57,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                AmountText(
+                AnimatedAmount(
                   Money(minor: netWorth, currency: currency),
                   formatter: formatter,
                   tone: AmountTone.auto,
