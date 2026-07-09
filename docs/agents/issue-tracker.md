@@ -2,14 +2,21 @@
 
 Issues and PRDs for this repo live as GitHub issues on `AbdullahSaad5/ledgr`. Use the `gh` CLI for all operations.
 
-## ⚠️ Auth caveat (this machine)
+## ⚠️ Auth on this machine (required for every gh command)
 
-The default `gh` login is the **work** account (`abdullahsaaddtc`). It can operate on this personal repo's issues **only if** it has been added as a collaborator on `AbdullahSaad5/ledgr`. If `gh issue` commands 403/404:
+The default `gh` login is the **work** account (`abdullahsaaddtc`), which cannot see this private personal repo. The personal account (`AbdullahSaad5`) is also logged into gh's keyring. **Do not `gh auth switch`** (it's global and would break concurrent work sessions). Instead, prefix every gh command in this repo with the personal token:
 
-1. Check `gh auth status` — if the personal account (`AbdullahSaad5`) is also logged in, `gh auth switch -u AbdullahSaad5` for this task (switch back after).
-2. Otherwise stop and ask Saad to either add the work account as a collaborator or run `! gh auth login` for the personal account.
+```bash
+GH_TOKEN=$(gh auth token -u AbdullahSaad5) gh issue list -R AbdullahSaad5/ledgr --state open
+```
+
+For a longer run of commands, export once per shell: `export GH_TOKEN=$(gh auth token -u AbdullahSaad5)`.
 
 Git pushes are unaffected — they go over SSH with the personal key (`git push origin main`), never via `gh`.
+
+## Wayfinder map for the v1.0 effort
+
+The map is issue **#1** ([Wayfinder map: Ledgr v1.0 — zero to Play-ready release](https://github.com/AbdullahSaad5/ledgr/issues/1)); tickets #2–#13 are its sub-issues with native dependency edges. Frontier = open, unblocked, unassigned sub-issues.
 
 ## Conventions
 
@@ -45,6 +52,3 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Claim**: `gh issue edit <n> --add-assignee @me` — the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
 
-## Staging fallback (until the GitHub repo exists)
-
-If `AbdullahSaad5/ledgr` does not exist on GitHub yet, stage tickets as markdown under `.scratch/<effort>/` using the local conventions (map = `.scratch/<effort>/map.md`, tickets = `.scratch/<effort>/issues/NN-<slug>.md` with `Type:`/`Status:`/`Blocked by:` lines). Migrate them to GitHub issues verbatim once the repo is up, then delete the staged copies.

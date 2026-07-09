@@ -4,7 +4,7 @@ Personal finance & balance tracker. Flutter, Android-first, offline-first foreve
 
 ## Current state
 
-Pre-code. The repo contains the full plan, domain docs, and ADRs. First implementation milestone is M0 (scaffold) in `PLAN.md` §10. Work is driven by wayfinder tickets on the issue tracker (see below).
+Pre-code. The repo contains the full plan, domain docs, and ADRs. Work is driven by the wayfinder map — issue [#1](https://github.com/AbdullahSaad5/ledgr/issues/1) — whose sub-issues #2–#13 chain the M0–M7 build (PLAN.md §10) plus open decisions. Claim the first open, unblocked, unassigned ticket; one ticket per session.
 
 ## What Ledgr is (30 seconds)
 
@@ -49,7 +49,7 @@ flutter build appbundle --release                          # store flavor
 
 ## Git
 
-- Repo: `git@github.com:AbdullahSaad5/ledgr.git` (personal account). **Push over SSH only** — the `gh` CLI here is authed as the work account; `gh`-based pushes 403. `git push origin main` works via the personal SSH key.
+- Repo: `git@github.com:AbdullahSaad5/ledgr.git` (personal account, private). **Push over SSH only** (`git push origin main`, personal SSH key). For `gh` commands (issues, PRs, API), the default gh login is the work account which cannot see this repo — prefix with the personal token: `GH_TOKEN=$(gh auth token -u AbdullahSaad5) gh <cmd>`. Never `gh auth switch` (global, breaks other sessions). Details: `docs/agents/issue-tracker.md`.
 - Conventional commits (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`...). No attribution footers.
 - Branch per milestone/ticket; PRs optional while solo, required once collaborators exist.
 
