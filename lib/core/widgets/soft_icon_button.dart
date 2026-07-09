@@ -1,40 +1,29 @@
 import 'package:flutter/material.dart';
 
-/// The app's standard header action: a soft tonal superellipse icon button.
+/// The app's standard header action: a quiet, borderless icon button with a
+/// tight footprint (no boxed background — headers stay calm).
 class SoftIconButton extends StatelessWidget {
   const SoftIconButton({
     required this.icon,
     this.onPressed,
     this.tooltip,
-    this.size = 42,
     super.key,
   });
 
   final IconData icon;
   final VoidCallback? onPressed;
   final String? tooltip;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shape = RoundedSuperellipseBorder(
-      borderRadius: BorderRadius.circular(size / 3),
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: tooltip,
+      icon: Icon(icon, size: 22, color: scheme.onSurface),
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.all(6),
+      constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
     );
-    final button = Material(
-      color: scheme.surfaceContainer,
-      shape: shape,
-      child: InkWell(
-        onTap: onPressed,
-        customBorder: shape,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Icon(icon, size: size * 0.45, color: scheme.onSurface),
-        ),
-      ),
-    );
-    if (tooltip == null) return button;
-    return Tooltip(message: tooltip, child: button);
   }
 }

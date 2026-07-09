@@ -11,6 +11,7 @@ import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/animated_amount.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/ledgr_header.dart';
+import 'package:ledgr/core/widgets/menu_sheet.dart';
 import 'package:ledgr/core/widgets/pressable.dart';
 import 'package:ledgr/core/widgets/section_header.dart';
 import 'package:ledgr/core/widgets/soft_icon_button.dart';
@@ -59,15 +60,38 @@ class HomeScreen extends ConsumerWidget {
                 tooltip: 'Search',
                 onPressed: () => context.push('/search'),
               ),
-              PopupMenuButton<String>(
-                onSelected: (v) => context.push('/$v'),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'debts', child: Text('Debts')),
-                  PopupMenuItem(value: 'recurring', child: Text('Recurring')),
-                  PopupMenuItem(value: 'upcoming', child: Text('Upcoming')),
-                  PopupMenuItem(value: 'settings', child: Text('Settings')),
-                ],
-                child: const SoftIconButton(icon: LucideIcons.moreVertical),
+              SoftIconButton(
+                icon: LucideIcons.moreVertical,
+                tooltip: 'More',
+                onPressed: () => MenuSheet.show(
+                  context,
+                  items: [
+                    MenuSheetItem(
+                      icon: LucideIcons.handCoins,
+                      label: 'Debts',
+                      subtitle: 'Money lent and borrowed',
+                      onTap: () => context.push('/debts'),
+                    ),
+                    MenuSheetItem(
+                      icon: LucideIcons.repeat,
+                      label: 'Recurring',
+                      subtitle: 'Scheduled transactions',
+                      onTap: () => context.push('/recurring'),
+                    ),
+                    MenuSheetItem(
+                      icon: LucideIcons.calendarClock,
+                      label: 'Upcoming',
+                      subtitle: "What's due next",
+                      onTap: () => context.push('/upcoming'),
+                    ),
+                    MenuSheetItem(
+                      icon: LucideIcons.settings,
+                      label: 'Settings',
+                      subtitle: 'Theme, security, backup',
+                      onTap: () => context.push('/settings'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

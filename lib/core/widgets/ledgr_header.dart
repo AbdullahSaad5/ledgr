@@ -35,10 +35,7 @@ class LedgrHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          for (final (i, action) in actions.indexed) ...[
-            if (i > 0) const SizedBox(width: Gaps.sm),
-            action,
-          ],
+          ...actions,
         ],
       ),
     );

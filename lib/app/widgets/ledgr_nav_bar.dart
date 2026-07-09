@@ -87,41 +87,30 @@ class _NavDestination extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
+    final color = selected ? scheme.primary : scheme.onSurfaceVariant;
+
     return InkWell(
       onTap: onTap,
       customBorder: RoundedSuperellipseBorder(
         borderRadius: BorderRadius.circular(24),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
+            AnimatedScale(
+              scale: selected ? 1.1 : 1.0,
+              duration: const Duration(milliseconds: 200),
               curve: Curves.easeOutCubic,
-              width: 44,
-              height: 28,
-              decoration: ShapeDecoration(
-                color: selected ? scheme.primaryContainer : Colors.transparent,
-                shape: RoundedSuperellipseBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Icon(
-                item.icon,
-                size: 20,
-                color: selected
-                    ? scheme.onPrimaryContainer
-                    : scheme.onSurfaceVariant,
-              ),
+              child: Icon(item.icon, size: 21, color: color),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               item.label,
               style: text.labelSmall?.copyWith(
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                color: color,
               ),
             ),
           ],
@@ -143,24 +132,22 @@ class _NavFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Container(
-        width: 56,
-        height: 56,
-        decoration: ShapeDecoration(
-          shape: RoundedSuperellipseBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: scheme.heroGradient,
           ),
-          shadows: [
+          boxShadow: [
             BoxShadow(
-              color: scheme.heroGradient.last.withValues(alpha: 0.45),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
+              color: scheme.heroGradient.last.withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -171,8 +158,9 @@ class _NavFab extends StatelessWidget {
           highlightElevation: 0,
           backgroundColor: Colors.transparent,
           foregroundColor: scheme.onHero,
+          shape: const CircleBorder(),
           onPressed: onPressed,
-          child: const Icon(Icons.add, size: 28),
+          child: const Icon(Icons.add, size: 26),
         ),
       ),
     );
