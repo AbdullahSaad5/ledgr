@@ -89,8 +89,11 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
             return Stack(
               children: [
                 child ?? const SizedBox.shrink(),
-                if (!settings.onboardingComplete) const OnboardingScreen(),
-                if (locked) const LockScreen(),
+                // Gate screens run in their own Navigator so their text fields,
+                // dropdowns, and sheets have an Overlay in scope.
+                if (!settings.onboardingComplete)
+                  _gate(const OnboardingScreen()),
+                if (locked) _gate(const LockScreen()),
                 if (_obscured && !locked)
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -101,6 +104,14 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
           },
         );
       },
+    );
+  }
+
+  /// Hosts a full-screen gate (onboarding / lock) in its own Navigator so it
+  /// gets an Overlay, independent of the router's navigator.
+  Widget _gate(Widget screen) {
+    return Navigator(
+      onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => screen),
     );
   }
 }
