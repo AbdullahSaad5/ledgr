@@ -1,0 +1,31 @@
+# Local work-in-progress notes / staged tickets (wayfinder staging is committed selectively)
+.scratch/
+
+# Flutter/Dart (applies once `flutter create` lands in M0)
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Codegen output is committed (drift/freezed) — do NOT ignore *.g.dart / *.freezed.dart
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.keystore
+*.jks
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+
+# Coverage
+coverage/
+
+# macOS
+.DS_Store
