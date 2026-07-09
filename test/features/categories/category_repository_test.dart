@@ -45,49 +45,51 @@ void main() {
   });
 
   group('mergeAndDelete', () {
-    test('reassigns transactions to the target and tombstones the source',
-        () async {
-      final accounts = AccountRepository(db);
-      final tx = TransactionRepository(db);
-      final acc = await accounts.create(
-        name: 'A',
-        type: AccountType.cash,
-        icon: 'payments',
-        color: 0xFF000000,
-        currency: 'PKR',
-      );
-      final from = await repo.create(
-        name: 'From',
-        kind: CategoryKind.expense,
-        icon: 'category',
-        color: 0xFF000000,
-      );
-      final to = await repo.create(
-        name: 'To',
-        kind: CategoryKind.expense,
-        icon: 'category',
-        color: 0xFF000000,
-      );
-      await tx.create(
-        TransactionDraft(
-          type: TxType.expense,
-          amountMinor: 500,
+    test(
+      'reassigns transactions to the target and tombstones the source',
+      () async {
+        final accounts = AccountRepository(db);
+        final tx = TransactionRepository(db);
+        final acc = await accounts.create(
+          name: 'A',
+          type: AccountType.cash,
+          icon: 'payments',
+          color: 0xFF000000,
           currency: 'PKR',
-          accountId: acc,
-          categoryId: from,
-          date: DateTime(2026, 7, 1),
-        ),
-      );
+        );
+        final from = await repo.create(
+          name: 'From',
+          kind: CategoryKind.expense,
+          icon: 'category',
+          color: 0xFF000000,
+        );
+        final to = await repo.create(
+          name: 'To',
+          kind: CategoryKind.expense,
+          icon: 'category',
+          color: 0xFF000000,
+        );
+        await tx.create(
+          TransactionDraft(
+            type: TxType.expense,
+            amountMinor: 500,
+            currency: 'PKR',
+            accountId: acc,
+            categoryId: from,
+            date: DateTime(2026, 7, 1),
+          ),
+        );
 
-      expect(await repo.transactionCount(from), 1);
-      await repo.mergeAndDelete(from, toId: to);
+        expect(await repo.transactionCount(from), 1);
+        await repo.mergeAndDelete(from, toId: to);
 
-      expect(await repo.transactionCount(from), 0);
-      expect(await repo.transactionCount(to), 1);
-      final kinds = await repo.byKind(CategoryKind.expense);
-      expect(kinds.map((c) => c.id), isNot(contains(from)));
-      expect(kinds.map((c) => c.id), contains(to));
-    });
+        expect(await repo.transactionCount(from), 0);
+        expect(await repo.transactionCount(to), 1);
+        final kinds = await repo.byKind(CategoryKind.expense);
+        expect(kinds.map((c) => c.id), isNot(contains(from)));
+        expect(kinds.map((c) => c.id), contains(to));
+      },
+    );
 
     test('detaches children when no target is given', () async {
       final parent = await repo.create(

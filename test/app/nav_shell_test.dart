@@ -48,11 +48,11 @@ void main() {
 
     await tester.tap(find.text('Budgets'));
     await tester.pumpAndSettle();
-    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('No budgets yet'), findsOneWidget);
 
     await tester.tap(find.text('Reports'));
     await tester.pumpAndSettle();
-    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('Overview'), findsWidgets);
 
     await _teardown(tester);
   });

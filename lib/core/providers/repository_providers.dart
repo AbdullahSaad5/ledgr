@@ -1,11 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
+import 'package:ledgr/core/notifications/notification_service.dart';
 import 'package:ledgr/core/providers/database_provider.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/features/accounts/data/account_repository.dart';
+import 'package:ledgr/features/budgets/data/budget_alert_service.dart';
+import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/categories/data/category_repository.dart';
+import 'package:ledgr/features/reports/data/reports_repository.dart';
+import 'package:ledgr/features/reports/domain/report_models.dart';
 import 'package:ledgr/features/tags/data/tag_repository.dart';
 import 'package:ledgr/features/transactions/data/transaction_repository.dart';
 import 'package:ledgr/features/transactions/domain/transaction_filter.dart';
@@ -25,6 +30,60 @@ final categoryRepositoryProvider = Provider<CategoryRepository>(
 final tagRepositoryProvider = Provider<TagRepository>(
   (ref) => TagRepository(ref.watch(databaseProvider)),
 );
+
+final budgetRepositoryProvider = Provider<BudgetRepository>(
+  (ref) => BudgetRepository(ref.watch(databaseProvider)),
+);
+
+final reportsRepositoryProvider = Provider<ReportsRepository>(
+  (ref) => ReportsRepository(
+    ref.watch(databaseProvider),
+    ref.watch(periodResolverProvider),
+  ),
+);
+
+final notificationServiceProvider = Provider<NotificationService>(
+  (ref) => NotificationService(),
+);
+
+final budgetAlertServiceProvider = Provider<BudgetAlertService>(
+  (ref) => BudgetAlertService(
+    ref.watch(budgetRepositoryProvider),
+    ref.watch(notificationServiceProvider),
+  ),
+);
+
+/// Live budget progress for the selected period.
+final budgetProgressProvider = StreamProvider<List<BudgetProgress>>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(budgetRepositoryProvider).watchProgress(period);
+});
+
+// Report snapshots for the selected period.
+final spendByCategoryProvider = FutureProvider<List<CategorySpend>>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(reportsRepositoryProvider).spendByCategory(period);
+});
+
+final monthTotalsProvider = FutureProvider<MonthPoint>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(reportsRepositoryProvider).monthTotals(period);
+});
+
+final topPayeesProvider = FutureProvider<List<PayeeTotal>>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(reportsRepositoryProvider).topPayees(period);
+});
+
+final monthlyTrendProvider = FutureProvider<List<MonthPoint>>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(reportsRepositoryProvider).monthlyTrend(period);
+});
+
+final netWorthSeriesProvider = FutureProvider<List<NetWorthPoint>>((ref) {
+  final period = ref.watch(selectedPeriodProvider);
+  return ref.watch(reportsRepositoryProvider).netWorthSeries(period);
+});
 
 final allTagsProvider = StreamProvider<List<Tag>>(
   (ref) => ref.watch(tagRepositoryProvider).watchAll(),

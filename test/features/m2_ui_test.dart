@@ -71,8 +71,9 @@ Future<({int cash, int bank})> _seedAccountsAndTx(AppDatabase db) async {
 }
 
 void main() {
-  testWidgets('category management lists seeded categories and adds one',
-      (tester) async {
+  testWidgets('category management lists seeded categories and adds one', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -90,9 +91,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // New category lands at the end of the list (off-screen), so verify in DB.
-    final created = await (db.select(db.categories)
-          ..where((c) => c.name.equals('Hobbies')))
-        .get();
+    final created = await (db.select(
+      db.categories,
+    )..where((c) => c.name.equals('Hobbies'))).get();
     expect(created, hasLength(1));
 
     await _teardown(tester);
@@ -175,8 +176,9 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('add a transfer saves a single row touching both accounts',
-      (tester) async {
+  testWidgets('add a transfer saves a single row touching both accounts', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     final ids = await _seedAccountsAndTx(db);
@@ -200,9 +202,9 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    final transfers = await (db.select(db.transactions)
-          ..where((t) => t.type.equalsValue(TxType.transfer)))
-        .get();
+    final transfers = await (db.select(
+      db.transactions,
+    )..where((t) => t.type.equalsValue(TxType.transfer))).get();
     expect(transfers, hasLength(1));
     expect(transfers.single.accountId, ids.cash);
     expect(transfers.single.toAccountId, ids.bank);
@@ -210,8 +212,9 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('long-press selects and the selection bar deletes',
-      (tester) async {
+  testWidgets('long-press selects and the selection bar deletes', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     await _seedAccountsAndTx(db);
@@ -226,9 +229,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.delete_outline));
     await tester.pumpAndSettle();
 
-    final live = await (db.select(db.transactions)
-          ..where((t) => t.deletedAt.isNull()))
-        .get();
+    final live = await (db.select(
+      db.transactions,
+    )..where((t) => t.deletedAt.isNull())).get();
     expect(live, isEmpty);
 
     await _teardown(tester);
@@ -247,10 +250,11 @@ void main() {
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
-    final active = await (db.select(db.categories)
-          ..where((c) => c.kind.equalsValue(CategoryKind.expense))
-          ..where((c) => c.deletedAt.isNull()))
-        .get();
+    final active =
+        await (db.select(db.categories)
+              ..where((c) => c.kind.equalsValue(CategoryKind.expense))
+              ..where((c) => c.deletedAt.isNull()))
+            .get();
     expect(active, hasLength(17)); // 18 seeded − 1 deleted
 
     await _teardown(tester);

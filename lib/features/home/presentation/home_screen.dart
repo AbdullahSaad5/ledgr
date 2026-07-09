@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledgr/core/money/money.dart';
+import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
@@ -91,6 +92,7 @@ class HomeScreen extends ConsumerWidget {
               ],
             ),
           ),
+          _BudgetsSnapshot(formatter: formatter, currency: currency),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
             child: Text(
@@ -117,6 +119,65 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: 80),
         ],
       ),
+    );
+  }
+}
+
+class _BudgetsSnapshot extends ConsumerWidget {
+  const _BudgetsSnapshot({required this.formatter, required this.currency});
+
+  final MoneyFormatter formatter;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(budgetProgressProvider).valueOrNull ?? const [];
+    if (progress.isEmpty) return const SizedBox.shrink();
+    final top = [...progress]..sort((a, b) => b.fraction.compareTo(a.fraction));
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Budgets', style: Theme.of(context).textTheme.titleMedium),
+              TextButton(
+                onPressed: () => context.push('/budgets'),
+                child: const Text('See all'),
+              ),
+            ],
+          ),
+        ),
+        for (final p in top.take(3))
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: p.fraction,
+                      minHeight: 8,
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      color: p.fraction >= 1.0
+                          ? scheme.error
+                          : p.fraction >= 0.8
+                          ? Colors.orange
+                          : scheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('${(p.fraction * 100).round()}%'),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

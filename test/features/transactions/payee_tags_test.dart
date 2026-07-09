@@ -26,16 +26,16 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> expense(String payee, {int category = 1}) => tx.create(
-        TransactionDraft(
-          type: TxType.expense,
-          amountMinor: 100,
-          currency: 'PKR',
-          accountId: account,
-          categoryId: category,
-          date: DateTime(2026, 7, 1),
-          payee: payee,
-        ),
-      );
+    TransactionDraft(
+      type: TxType.expense,
+      amountMinor: 100,
+      currency: 'PKR',
+      accountId: account,
+      categoryId: category,
+      date: DateTime(2026, 7, 1),
+      payee: payee,
+    ),
+  );
 
   group('payee autocomplete', () {
     test('ranks by frequency then filters by prefix', () async {

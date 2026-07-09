@@ -99,8 +99,9 @@ Future<void> _teardown(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('accounts screen shows net worth and grouped accounts',
-      (tester) async {
+  testWidgets('accounts screen shows net worth and grouped accounts', (
+    tester,
+  ) async {
     final seed = await _seed();
     addTearDown(seed.db.close);
 
@@ -136,8 +137,9 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('home dashboard renders net worth and recent activity',
-      (tester) async {
+  testWidgets('home dashboard renders net worth and recent activity', (
+    tester,
+  ) async {
     final seed = await _seed();
     addTearDown(seed.db.close);
 
@@ -151,8 +153,9 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('transactions screen groups by day with a month summary',
-      (tester) async {
+  testWidgets('transactions screen groups by day with a month summary', (
+    tester,
+  ) async {
     final seed = await _seed();
     addTearDown(seed.db.close);
 
@@ -172,8 +175,9 @@ void main() {
     await _teardown(tester);
   });
 
-  testWidgets('tapping a transaction opens the detail sheet and duplicates',
-      (tester) async {
+  testWidgets('tapping a transaction opens the detail sheet and duplicates', (
+    tester,
+  ) async {
     final seed = await _seed();
     addTearDown(seed.db.close);
 
@@ -187,9 +191,9 @@ void main() {
     await tester.tap(find.text('Duplicate'));
     await tester.pumpAndSettle();
 
-    final expenses = await (seed.db.select(seed.db.transactions)
-          ..where((t) => t.type.equalsValue(TxType.expense)))
-        .get();
+    final expenses = await (seed.db.select(
+      seed.db.transactions,
+    )..where((t) => t.type.equalsValue(TxType.expense))).get();
     expect(expenses.length, 2); // original + duplicate
 
     await _teardown(tester);
@@ -235,9 +239,9 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    final income = await (seed.db.select(seed.db.transactions)
-          ..where((t) => t.type.equalsValue(TxType.income)))
-        .get();
+    final income = await (seed.db.select(
+      seed.db.transactions,
+    )..where((t) => t.type.equalsValue(TxType.income))).get();
     expect(income.length, 2); // seeded + new
     await _teardown(tester);
   });

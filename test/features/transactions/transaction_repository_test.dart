@@ -20,12 +20,12 @@ void main() {
   tearDown(() => db.close());
 
   Future<int> account(String name) => accounts.create(
-        name: name,
-        type: AccountType.bank,
-        icon: 'account_balance',
-        color: 0xFF000000,
-        currency: 'PKR',
-      );
+    name: name,
+    type: AccountType.bank,
+    icon: 'account_balance',
+    color: 0xFF000000,
+    currency: 'PKR',
+  );
 
   TransactionDraft expense(int acc, int amount, {DateTime? date}) =>
       TransactionDraft(
@@ -99,18 +99,20 @@ void main() {
   });
 
   group('soft delete + restore (undo)', () {
-    test('tombstoned rows leave the period view and come back on restore',
-        () async {
-      final acc = await account('A');
-      final id = await repo.create(expense(acc, 500));
-      final july = PeriodResolver(1).ofAnchor(2026, 7);
+    test(
+      'tombstoned rows leave the period view and come back on restore',
+      () async {
+        final acc = await account('A');
+        final id = await repo.create(expense(acc, 500));
+        final july = PeriodResolver(1).ofAnchor(2026, 7);
 
-      expect((await repo.watchInPeriod(july).first).length, 1);
-      await repo.softDelete(id);
-      expect((await repo.watchInPeriod(july).first).length, 0);
-      await repo.restore(id);
-      expect((await repo.watchInPeriod(july).first).length, 1);
-    });
+        expect((await repo.watchInPeriod(july).first).length, 1);
+        await repo.softDelete(id);
+        expect((await repo.watchInPeriod(july).first).length, 0);
+        await repo.restore(id);
+        expect((await repo.watchInPeriod(july).first).length, 1);
+      },
+    );
   });
 
   group('duplicate', () {

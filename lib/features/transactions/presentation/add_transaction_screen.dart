@@ -134,6 +134,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       id = await repo.create(draft);
     }
     await ref.read(tagRepositoryProvider).setTagsForTransaction(id, _tagIds);
+
+    if (draft.type == TxType.expense) {
+      final period = ref
+          .read(periodResolverProvider)
+          .periodContaining(draft.date);
+      await ref
+          .read(budgetAlertServiceProvider)
+          .onExpenseRecorded(
+            amountMinor: draft.amountMinor,
+            categoryId: draft.categoryId,
+            period: period,
+          );
+    }
     if (mounted) Navigator.of(context).pop();
   }
 

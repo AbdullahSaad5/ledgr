@@ -15,13 +15,13 @@ void main() {
   tearDown(() => db.close());
 
   Future<int> makeAccount(String name, {int opening = 0}) => repo.create(
-        name: name,
-        type: AccountType.bank,
-        icon: 'account_balance',
-        color: 0xFF000000,
-        currency: 'PKR',
-        openingBalanceMinor: opening,
-      );
+    name: name,
+    type: AccountType.bank,
+    icon: 'account_balance',
+    color: 0xFF000000,
+    currency: 'PKR',
+    openingBalanceMinor: opening,
+  );
 
   group('create + positions', () {
     test('assigns incrementing positions', () async {

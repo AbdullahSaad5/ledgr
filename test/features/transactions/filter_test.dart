@@ -44,18 +44,18 @@ void main() {
     String? note,
     DateTime? date,
   }) => tx.create(
-        TransactionDraft(
-          type: type,
-          amountMinor: amount,
-          currency: 'PKR',
-          accountId: account,
-          categoryId: type == TxType.transfer ? null : category,
-          toAccountId: type == TxType.transfer ? bank : null,
-          payee: payee,
-          note: note,
-          date: date ?? DateTime(2026, 7, 10),
-        ),
-      );
+    TransactionDraft(
+      type: type,
+      amountMinor: amount,
+      currency: 'PKR',
+      accountId: account,
+      categoryId: type == TxType.transfer ? null : category,
+      toAccountId: type == TxType.transfer ? bank : null,
+      payee: payee,
+      note: note,
+      date: date ?? DateTime(2026, 7, 10),
+    ),
+  );
 
   Future<List<Transaction>> filter(TransactionFilter f) =>
       tx.watchFiltered(f).first;

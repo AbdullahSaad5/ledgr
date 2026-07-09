@@ -9,8 +9,9 @@ import 'package:ledgr/features/accounts/data/account_repository.dart';
 import 'package:ledgr/features/transactions/presentation/add_transaction_screen.dart';
 
 void main() {
-  testWidgets('enter an amount on the keypad and save creates a transaction',
-      (tester) async {
+  testWidgets('enter an amount on the keypad and save creates a transaction', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
