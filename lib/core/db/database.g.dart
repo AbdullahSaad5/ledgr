@@ -6876,9 +6876,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       result: [TableUpdate('debt_payments', kind: UpdateKind.update)],
     ),
   ]);
-  @override
-  DriftDatabaseOptions get options =>
-      const DriftDatabaseOptions(storeDateTimeAsText: true);
 }
 
 typedef $$AccountsTableCreateCompanionBuilder =

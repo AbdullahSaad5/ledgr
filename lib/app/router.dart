@@ -185,8 +185,10 @@ class _AnimatedBranchContainer extends StatelessWidget {
         for (final (i, child) in children.indexed)
           IgnorePointer(
             ignoring: i != currentIndex,
-            child: TickerMode(
-              enabled: i == currentIndex,
+            child: ExcludeFocus(
+              excluding: i != currentIndex,
+              // Animations sit OUTSIDE TickerMode: muting the inactive
+              // branch's tickers must not freeze its own fade-out.
               child: AnimatedSlide(
                 offset: i == currentIndex
                     ? Offset.zero
@@ -197,7 +199,7 @@ class _AnimatedBranchContainer extends StatelessWidget {
                   opacity: i == currentIndex ? 1 : 0,
                   duration: const Duration(milliseconds: 220),
                   curve: Curves.easeOut,
-                  child: child,
+                  child: TickerMode(enabled: i == currentIndex, child: child),
                 ),
               ),
             ),

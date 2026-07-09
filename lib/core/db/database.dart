@@ -27,13 +27,60 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
       await seedDefaults(this);
+    },
+    onUpgrade: (m, from, to) async {
+      // v1 stored datetimes as ISO text with a UTC offset, which drift read
+      // back as UTC — shifting displayed days for anyone east/west of UTC.
+      // v3 stores unix seconds in INTEGER columns (drift's default): values
+      // read back in local time and compare numerically. The transform also
+      // accepts v2's interim numeric-in-TEXT state.
+      if (from < 3) {
+        for (final table in <TableInfo<Table, dynamic>>[
+          accounts,
+          categories,
+          transactions,
+          tags,
+          attachments,
+          budgets,
+          recurringRules,
+          debts,
+          debtPayments,
+        ]) {
+          final dateColumns = table.$columns
+              .where(
+                (GeneratedColumn<Object> c) => c.type == DriftSqlType.dateTime,
+              )
+              .toList();
+          // TableMigration is drift's supported (if experimental) way to
+          // rebuild a table in place; the alternative is hand-written SQL.
+          // ignore: experimental_member_use
+          await m.alterTable(
+            // Same experimental API as above.
+            // ignore: experimental_member_use
+            TableMigration(
+              table,
+              columnTransformer: {
+                for (final c in dateColumns)
+                  c: CustomExpression<DateTime>(
+                    "CASE WHEN typeof(${c.name}) = 'text' "
+                    "AND ${c.name} GLOB '[0-9]*' "
+                    'THEN CAST(${c.name} AS INTEGER) '
+                    "WHEN typeof(${c.name}) = 'text' "
+                    'THEN unixepoch(${c.name}) '
+                    'ELSE ${c.name} END',
+                  ),
+              },
+            ),
+          );
+        }
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

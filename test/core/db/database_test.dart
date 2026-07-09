@@ -11,8 +11,8 @@ void main() {
   tearDown(() => db.close());
 
   group('schema + seed', () {
-    test('schema version is 1', () {
-      expect(db.schemaVersion, 1);
+    test('schema version is 3 (unix datetime storage)', () {
+      expect(db.schemaVersion, 3);
     });
 
     test('seeds default categories (18 expense + 7 income)', () async {
