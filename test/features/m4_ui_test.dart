@@ -38,8 +38,9 @@ Future<void> _teardown(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('adding a lent debt posts an expense and shows it',
-      (tester) async {
+  testWidgets('adding a lent debt posts an expense and shows it', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     final cash = await AccountRepository(db).create(

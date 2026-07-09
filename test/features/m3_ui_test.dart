@@ -59,8 +59,9 @@ Future<void> _seed(AppDatabase db) async {
 }
 
 void main() {
-  testWidgets('budgets screen shows a progress bar for a budget',
-      (tester) async {
+  testWidgets('budgets screen shows a progress bar for a budget', (
+    tester,
+  ) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     await _seed(db);

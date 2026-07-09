@@ -6,6 +6,7 @@ import 'package:ledgr/core/providers/database_provider.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/features/accounts/data/account_repository.dart';
+import 'package:ledgr/features/backup/data/backup_service.dart';
 import 'package:ledgr/features/budgets/data/budget_alert_service.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/categories/data/category_repository.dart';
@@ -64,6 +65,10 @@ final debtRepositoryProvider = Provider<DebtRepository>(
     ref.watch(databaseProvider),
     ref.watch(transactionRepositoryProvider),
   ),
+);
+
+final backupServiceProvider = Provider<BackupService>(
+  (ref) => BackupService(ref.watch(databaseProvider)),
 );
 
 final debtsByDirectionProvider =

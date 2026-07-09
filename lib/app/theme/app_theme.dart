@@ -6,13 +6,20 @@ abstract final class AppTheme {
   /// Ledgr's brand seed (deep teal) — used when dynamic color is unavailable.
   static const Color seedColor = Color(0xFF00696D);
 
-  static ThemeData light(ColorScheme? dynamicScheme) =>
-      _themeFor(dynamicScheme ?? ColorScheme.fromSeed(seedColor: seedColor));
+  static ThemeData light(ColorScheme? dynamicScheme, {Color? fallbackSeed}) =>
+      _themeFor(
+        dynamicScheme ??
+            ColorScheme.fromSeed(seedColor: fallbackSeed ?? seedColor),
+      );
 
-  static ThemeData dark(ColorScheme? dynamicScheme) => _themeFor(
-    dynamicScheme ??
-        ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark),
-  );
+  static ThemeData dark(ColorScheme? dynamicScheme, {Color? fallbackSeed}) =>
+      _themeFor(
+        dynamicScheme ??
+            ColorScheme.fromSeed(
+              seedColor: fallbackSeed ?? seedColor,
+              brightness: Brightness.dark,
+            ),
+      );
 
   static ThemeData _themeFor(ColorScheme scheme) {
     return ThemeData(

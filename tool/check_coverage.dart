@@ -15,6 +15,11 @@ bool _excluded(String path) {
       // DB open wiring (real device I/O; overridden in tests).
       path.endsWith('lib/core/db/connection.dart') ||
       path.endsWith('lib/core/providers/database_provider.dart') ||
+      // Thin platform-IO wrappers (share sheet, secure storage, local_auth,
+      // local notifications) — guarded, not meaningfully unit-testable.
+      path.endsWith('lib/features/reports/presentation/report_export.dart') ||
+      path.endsWith('lib/features/security/data/app_lock_service.dart') ||
+      path.endsWith('lib/core/notifications/notification_service.dart') ||
       // Declarative Drift schema — column getters are metadata, not executable
       // logic; the schema is exercised behaviourally by the DB tests through
       // the generated code.

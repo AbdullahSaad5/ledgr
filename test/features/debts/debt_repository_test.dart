@@ -85,8 +85,7 @@ void main() {
       accountId: cash,
     );
     expect(await accounts.balance(cash), 1500000);
-    final borrowed =
-        await repo.watchByDirection(DebtDirection.borrowed).first;
+    final borrowed = await repo.watchByDirection(DebtDirection.borrowed).first;
     expect(borrowed.single.remainingMinor, 500000);
   });
 }

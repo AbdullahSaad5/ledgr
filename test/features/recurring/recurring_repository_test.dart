@@ -50,10 +50,9 @@ void main() {
     );
   }
 
-  Future<int> txCount() async =>
-      (await (db.select(db.transactions)..where((t) => t.deletedAt.isNull()))
-              .get())
-          .length;
+  Future<int> txCount() async => (await (db.select(
+    db.transactions,
+  )..where((t) => t.deletedAt.isNull())).get()).length;
 
   test('catch-up posts every missed occurrence once', () async {
     await monthlyRule(nextDue: DateTime(2026, 5, 1));
@@ -85,9 +84,9 @@ void main() {
     );
     final posted = await repo.catchUp(DateTime(2026, 12, 31));
     expect(posted, 2);
-    final rule =
-        await (db.select(db.recurringRules)..where((r) => r.id.equals(id)))
-            .getSingle();
+    final rule = await (db.select(
+      db.recurringRules,
+    )..where((r) => r.id.equals(id))).getSingle();
     expect(rule.active, isFalse);
   });
 
@@ -113,14 +112,14 @@ void main() {
       nextDue: DateTime(2026, 7, 1),
       autoPost: false,
     );
-    final rule =
-        await (db.select(db.recurringRules)..where((r) => r.id.equals(id)))
-            .getSingle();
+    final rule = await (db.select(
+      db.recurringRules,
+    )..where((r) => r.id.equals(id))).getSingle();
     await repo.markPaid(rule);
     expect(await txCount(), 1);
-    final updated =
-        await (db.select(db.recurringRules)..where((r) => r.id.equals(id)))
-            .getSingle();
+    final updated = await (db.select(
+      db.recurringRules,
+    )..where((r) => r.id.equals(id))).getSingle();
     expect(updated.nextDue, DateTime(2026, 8, 1));
   });
 }

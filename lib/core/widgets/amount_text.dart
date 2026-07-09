@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
+import 'package:ledgr/core/settings/settings_provider.dart';
 
 /// How an amount should be tinted.
 enum AmountTone { neutral, income, expense, auto }
 
 /// Renders a [Money] value with tabular figures and optional semantic colour.
-/// `auto` derives the colour from the sign (income if >= 0, expense if < 0).
-class AmountText extends StatelessWidget {
+/// `auto` derives the colour from the sign. Respects the global amount-blur
+/// privacy toggle.
+class AmountText extends ConsumerWidget {
   const AmountText(
     this.money, {
     required this.formatter,
@@ -25,7 +28,10 @@ class AmountText extends StatelessWidget {
   final bool showPlus;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(
+      appSettingsProvider.select((s) => s.amountsHidden),
+    );
     final scheme = Theme.of(context).colorScheme;
     final color = switch (tone) {
       AmountTone.neutral => null,
@@ -34,8 +40,9 @@ class AmountText extends StatelessWidget {
       AmountTone.auto => money.isNegative ? scheme.expense : scheme.income,
     };
     final prefix = showPlus && money.isPositive ? '+' : '';
+    final text = hidden ? '••••' : '$prefix${formatter.format(money)}';
     return Text(
-      '$prefix${formatter.format(money)}',
+      text,
       style: (style ?? DefaultTextStyle.of(context).style).copyWith(
         color: color,
         fontFeatures: const [FontFeature.tabularFigures()],

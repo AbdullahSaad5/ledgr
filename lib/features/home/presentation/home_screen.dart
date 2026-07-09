@@ -37,6 +37,7 @@ class HomeScreen extends ConsumerWidget {
               PopupMenuItem(value: 'debts', child: Text('Debts')),
               PopupMenuItem(value: 'recurring', child: Text('Recurring')),
               PopupMenuItem(value: 'upcoming', child: Text('Upcoming')),
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
             ],
           ),
         ],

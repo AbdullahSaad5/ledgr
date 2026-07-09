@@ -10,6 +10,7 @@ import 'package:ledgr/features/home/presentation/home_screen.dart';
 import 'package:ledgr/features/recurring/presentation/recurring_screen.dart';
 import 'package:ledgr/features/recurring/presentation/upcoming_screen.dart';
 import 'package:ledgr/features/reports/presentation/reports_screen.dart';
+import 'package:ledgr/features/settings/presentation/settings_screen.dart';
 import 'package:ledgr/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:ledgr/features/transactions/presentation/search_screen.dart';
 import 'package:ledgr/features/transactions/presentation/transactions_screen.dart';
@@ -27,6 +28,7 @@ enum AppRoute {
   recurring('/recurring', 'recurring'),
   upcoming('/upcoming', 'upcoming'),
   debts('/debts', 'debts'),
+  settings('/settings', 'settings'),
   addTransaction('/tx/new', 'addTransaction'),
   editTransaction('/tx/:id/edit', 'editTransaction');
 
@@ -129,6 +131,12 @@ GoRouter createRouter() {
         name: AppRoute.debts.name,
         parentNavigatorKey: _rootKey,
         builder: (context, state) => const DebtsScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.settings.path,
+        name: AppRoute.settings.name,
+        parentNavigatorKey: _rootKey,
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: AppRoute.addTransaction.path,

@@ -19,3 +19,5 @@ linter:
     sort_pub_dependencies: false
     # Explicit arguments are kept in tests for readability.
     avoid_redundant_argument_values: false
+    # lock()/unlock() read better as methods than a boolean setter.
+    use_setters_to_change_properties: false
