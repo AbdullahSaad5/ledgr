@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
+import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 
-/// Compact account tile showing icon, name, and current balance. Used in the
-/// dashboard carousel and the accounts list.
+/// Compact account card showing icon, name, type, and current balance. Used in
+/// the dashboard carousel and the accounts list.
 class AccountCard extends StatelessWidget {
   const AccountCard({
     required this.account,
@@ -21,26 +23,38 @@ class AccountCard extends StatelessWidget {
   final MoneyFormatter formatter;
   final VoidCallback? onTap;
 
+  static const _typeLabels = {
+    AccountType.cash: 'Cash',
+    AccountType.bank: 'Bank',
+    AccountType.creditCard: 'Credit card',
+    AccountType.wallet: 'Wallet',
+    AccountType.savings: 'Savings',
+    AccountType.investment: 'Investment',
+    AccountType.other: 'Account',
+  };
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     final accent = Color(account.color);
     final balance = Money(minor: balanceMinor, currency: account.currency);
+    final isDark = scheme.brightness == Brightness.dark;
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Container(
-          width: 180,
-          padding: const EdgeInsets.all(16),
+          width: 190,
+          padding: const EdgeInsets.all(Gaps.lg),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                accent.withValues(alpha: 0.18),
-                accent.withValues(alpha: 0.04),
+                accent.withValues(alpha: isDark ? 0.16 : 0.10),
+                accent.withValues(alpha: 0.02),
               ],
             ),
           ),
@@ -48,31 +62,58 @@ class AccountCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: accent.withValues(alpha: 0.9),
-                child: Icon(
-                  AppIcons.resolve(account.icon),
-                  size: 18,
-                  color: Colors.white,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: ShapeDecoration(
+                      color: accent.withValues(alpha: isDark ? 0.28 : 0.16),
+                      shape: RoundedSuperellipseBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Icon(
+                      AppIcons.resolve(account.icon),
+                      size: 18,
+                      color: isDark
+                          ? Color.lerp(accent, Colors.white, 0.35)
+                          : Color.lerp(accent, Colors.black, 0.25),
+                    ),
+                  ),
+                  const SizedBox(width: Gaps.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.titleSmall,
+                        ),
+                        Text(
+                          _typeLabels[account.type] ?? 'Account',
+                          style: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                account.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 4),
+              const Spacer(),
               AmountText(
                 balance,
                 formatter: formatter,
-                tone: AmountTone.auto,
-                style: Theme.of(context).textTheme.titleMedium,
+                tone: balanceMinor < 0
+                    ? AmountTone.expense
+                    : AmountTone.neutral,
+                style: text.titleLarge,
               ),
               if (account.creditLimitMinor != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: Gaps.sm),
                 _UtilizationBar(
                   balanceMinor: balanceMinor,
                   limitMinor: account.creditLimitMinor!,
@@ -109,12 +150,12 @@ class _UtilizationBar extends StatelessWidget {
         ? 0.0
         : (used / limitMinor).clamp(0.0, 1.0);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(99),
       child: LinearProgressIndicator(
         value: fraction,
         minHeight: 6,
         backgroundColor: track,
-        color: fraction > 0.9 ? Theme.of(context).colorScheme.error : color,
+        color: fraction > 0.9 ? Theme.of(context).colorScheme.expense : color,
       ),
     );
   }

@@ -146,8 +146,16 @@ void main() {
     await tester.pumpWidget(_wrap(seed.db, const HomeScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Net worth'), findsOneWidget);
-    expect(find.text('Recent'), findsOneWidget);
+    // The hero label renders uppercase.
+    expect(find.text('NET WORTH'), findsOneWidget);
+
+    // Recent activity sits below the fold on the test viewport.
+    await tester.scrollUntilVisible(
+      find.text('Recent activity'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Recent activity'), findsOneWidget);
     expect(find.text('Cafe'), findsWidgets);
 
     await _teardown(tester);

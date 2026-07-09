@@ -43,7 +43,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Home'), findsWidgets);
-    expect(find.text('Net worth'), findsOneWidget);
+    expect(find.text('NET WORTH'), findsOneWidget);
     expect(find.text('Add account'), findsOneWidget);
 
     await _teardown(tester);

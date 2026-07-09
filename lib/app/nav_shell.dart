@@ -20,10 +20,15 @@ class NavShell extends StatelessWidget {
     final l10n = AppL10n.of(context);
     return Scaffold(
       body: navigationShell,
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'add-transaction',
-        onPressed: () => context.pushNamed(AppRoute.addTransaction.name),
-        child: const Icon(Icons.add),
+      floatingActionButton: SizedBox(
+        width: 64,
+        height: 64,
+        child: FloatingActionButton(
+          heroTag: 'add-transaction',
+          tooltip: 'Log a transaction',
+          onPressed: () => context.pushNamed(AppRoute.addTransaction.name),
+          child: const Icon(Icons.add, size: 30),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: NavigationBar(

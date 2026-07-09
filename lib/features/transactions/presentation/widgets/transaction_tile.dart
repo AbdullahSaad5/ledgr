@@ -76,15 +76,19 @@ class TransactionTile extends StatelessWidget {
       onLongPress: onLongPress,
       selected: selected,
       selectedTileColor: scheme.primaryContainer.withValues(alpha: 0.4),
-      leading: selected
-          ? CircleAvatar(
-              backgroundColor: scheme.primary,
-              child: Icon(Icons.check, color: scheme.onPrimary),
-            )
-          : CircleAvatar(
-              backgroundColor: tint.withValues(alpha: 0.15),
-              child: Icon(icon, color: tint),
-            ),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: ShapeDecoration(
+          color: selected ? scheme.primary : tint.withValues(alpha: 0.14),
+          shape: RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: selected
+            ? Icon(Icons.check, color: scheme.onPrimary)
+            : Icon(icon, size: 20, color: tint),
+      ),
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: subtitle.isEmpty ? null : Text(subtitle),
       trailing: AmountText(
