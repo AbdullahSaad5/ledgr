@@ -19,6 +19,7 @@ import 'package:ledgr/core/widgets/period_switcher.dart';
 import 'package:ledgr/core/widgets/soft_icon_button.dart';
 import 'package:ledgr/core/widgets/stat_card.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
+import 'package:ledgr/features/transactions/presentation/tx_actions.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -182,6 +183,7 @@ class _SelectionHeader extends ConsumerWidget {
         const [];
     return showModalBottomSheet<int>(
       context: context,
+      useRootNavigator: true,
       builder: (_) => SafeArea(
         child: ListView(
           shrinkWrap: true,
@@ -306,6 +308,9 @@ class _TransactionList extends ConsumerWidget {
                     accountName: accounts[tx.accountId]?.name,
                     selected: selection.contains(tx.id),
                     onLongPress: () => toggle(tx.id),
+                    onEdit: () => editTransaction(context, tx.id),
+                    onDelete: () =>
+                        deleteTransactionWithUndo(ref, context, tx.id),
                     onTap: selecting
                         ? () => toggle(tx.id)
                         : () => TransactionDetailSheet.show(context, tx.id),

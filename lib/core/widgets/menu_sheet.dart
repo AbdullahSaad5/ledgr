@@ -33,6 +33,7 @@ class MenuSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       builder: (_) => MenuSheet(items: items, title: title),
     );
   }

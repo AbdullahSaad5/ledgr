@@ -10,6 +10,7 @@ class PinSetupSheet extends ConsumerStatefulWidget {
   static Future<bool?> show(BuildContext context) {
     return showModalBottomSheet<bool>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => const PinSetupSheet(),

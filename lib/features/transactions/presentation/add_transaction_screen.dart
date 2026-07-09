@@ -73,6 +73,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Future<void> _editPayee() async {
     final result = await showModalBottomSheet<String>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (_) => _PayeeSheet(initial: _payee.text),
     );
@@ -92,6 +93,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Future<void> _editTags() async {
     await showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       builder: (_) => _TagsSheet(
         selected: _tagIds,
@@ -775,6 +777,7 @@ String _dateLabel(DateTime d) {
 Future<int?> _pickAccount(BuildContext context, List<Account> accounts) {
   return showModalBottomSheet<int>(
     context: context,
+    useRootNavigator: true,
     builder: (_) => SafeArea(
       child: ListView(
         shrinkWrap: true,
@@ -804,6 +807,7 @@ Future<int?> _pickCategory(
       ref.read(categoriesByKindProvider(kind)).valueOrNull ?? const [];
   return showModalBottomSheet<int>(
     context: context,
+    useRootNavigator: true,
     builder: (_) => SafeArea(
       child: GridView.count(
         crossAxisCount: 4,

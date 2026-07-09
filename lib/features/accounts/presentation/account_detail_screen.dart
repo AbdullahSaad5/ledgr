@@ -12,6 +12,7 @@ import 'package:ledgr/core/widgets/menu_sheet.dart';
 import 'package:ledgr/features/accounts/presentation/account_form_sheet.dart';
 import 'package:ledgr/features/accounts/presentation/reconcile_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
+import 'package:ledgr/features/transactions/presentation/tx_actions.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -161,6 +162,9 @@ class AccountDetailScreen extends ConsumerWidget {
                               ? null
                               : categories[tx.categoryId],
                           perspectiveAccountId: accountId,
+                          onEdit: () => editTransaction(context, tx.id),
+                          onDelete: () =>
+                              deleteTransactionWithUndo(ref, context, tx.id),
                           onTap: () =>
                               TransactionDetailSheet.show(context, tx.id),
                         );

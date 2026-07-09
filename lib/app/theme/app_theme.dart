@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
 /// Ledgr's design system: a calm, trustworthy fintech look.
@@ -77,6 +78,15 @@ abstract final class AppTheme {
       textTheme: textTheme,
       scaffoldBackgroundColor: scheme.surface,
       splashFactory: InkSparkle.splashFactory,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: {
+          for (final platform in TargetPlatform.values)
+            platform: SharedAxisPageTransitionsBuilder(
+              transitionType: SharedAxisTransitionType.horizontal,
+              fillColor: scheme.surface,
+            ),
+        },
+      ),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,

@@ -94,30 +94,32 @@ final budgetProgressProvider = StreamProvider<List<BudgetProgress>>((ref) {
   return ref.watch(budgetRepositoryProvider).watchProgress(period);
 });
 
-// Report snapshots for the selected period.
-final spendByCategoryProvider = FutureProvider<List<CategorySpend>>((ref) {
+// Report snapshots for the selected period — live streams that re-run on
+// any money-affecting DB change so the dashboard and reports update in
+// realtime.
+final spendByCategoryProvider = StreamProvider<List<CategorySpend>>((ref) {
   final period = ref.watch(selectedPeriodProvider);
-  return ref.watch(reportsRepositoryProvider).spendByCategory(period);
+  return ref.watch(reportsRepositoryProvider).watchSpendByCategory(period);
 });
 
-final monthTotalsProvider = FutureProvider<MonthPoint>((ref) {
+final monthTotalsProvider = StreamProvider<MonthPoint>((ref) {
   final period = ref.watch(selectedPeriodProvider);
-  return ref.watch(reportsRepositoryProvider).monthTotals(period);
+  return ref.watch(reportsRepositoryProvider).watchMonthTotals(period);
 });
 
-final topPayeesProvider = FutureProvider<List<PayeeTotal>>((ref) {
+final topPayeesProvider = StreamProvider<List<PayeeTotal>>((ref) {
   final period = ref.watch(selectedPeriodProvider);
-  return ref.watch(reportsRepositoryProvider).topPayees(period);
+  return ref.watch(reportsRepositoryProvider).watchTopPayees(period);
 });
 
-final monthlyTrendProvider = FutureProvider<List<MonthPoint>>((ref) {
+final monthlyTrendProvider = StreamProvider<List<MonthPoint>>((ref) {
   final period = ref.watch(selectedPeriodProvider);
-  return ref.watch(reportsRepositoryProvider).monthlyTrend(period);
+  return ref.watch(reportsRepositoryProvider).watchMonthlyTrend(period);
 });
 
-final netWorthSeriesProvider = FutureProvider<List<NetWorthPoint>>((ref) {
+final netWorthSeriesProvider = StreamProvider<List<NetWorthPoint>>((ref) {
   final period = ref.watch(selectedPeriodProvider);
-  return ref.watch(reportsRepositoryProvider).netWorthSeries(period);
+  return ref.watch(reportsRepositoryProvider).watchNetWorthSeries(period);
 });
 
 final allTagsProvider = StreamProvider<List<Tag>>(

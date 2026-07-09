@@ -58,6 +58,11 @@ dependencies:
   collection: ^1.19.0
   meta: ^1.18.0
   lucide_icons_flutter: ^3.1.14+2
+  flutter_displaymode: ^0.7.0
+  flutter_slidable: ^4.0.3
+  flutter_animate: ^4.5.2
+  animations: ^2.2.0
+  quick_actions: ^1.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -74,6 +79,7 @@ dev_dependencies:
   json_serializable: ^6.9.0
   very_good_analysis: ^7.0.0
   flutter_native_splash: ^2.4.8
+  flutter_launcher_icons: ^0.14.4
 flutter:
 
   # The following line ensures that the Material Icons font is
@@ -126,6 +132,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Launcher icon (placeholder "L" mark until the visual identity lands,
+# issue #2). Regenerate with: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#0B3B36"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  adaptive_icon_monochrome: "assets/icon/icon_foreground.png"
 
 # Native splash: brand color only for now; a logo lands with the visual
 # identity (issue #2). Regenerate with: dart run flutter_native_splash:create

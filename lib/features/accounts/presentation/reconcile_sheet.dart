@@ -26,6 +26,7 @@ class ReconcileSheet extends ConsumerStatefulWidget {
   }) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) =>

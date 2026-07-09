@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
@@ -19,6 +20,8 @@ class TransactionTile extends StatelessWidget {
     this.perspectiveAccountId,
     this.onTap,
     this.onLongPress,
+    this.onEdit,
+    this.onDelete,
     this.selected = false,
     super.key,
   });
@@ -33,6 +36,10 @@ class TransactionTile extends StatelessWidget {
   final int? perspectiveAccountId;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+
+  /// When provided, the row can be swiped left to reveal edit/delete.
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final bool selected;
 
   @override
@@ -73,7 +80,7 @@ class TransactionTile extends StatelessWidget {
         t.note!,
     ].join(' · ');
 
-    return ListTile(
+    final tile = ListTile(
       onTap: onTap,
       onLongPress: onLongPress,
       selected: selected,
@@ -94,6 +101,32 @@ class TransactionTile extends StatelessWidget {
         showPlus: t.type == TxType.income,
         style: Theme.of(context).textTheme.titleMedium,
       ),
+    );
+
+    if (onEdit == null && onDelete == null) return tile;
+    return Slidable(
+      key: ValueKey('tx-${t.id}'),
+      endActionPane: ActionPane(
+        motion: const BehindMotion(),
+        extentRatio: 0.42,
+        children: [
+          if (onEdit != null)
+            SlidableAction(
+              onPressed: (_) => onEdit!(),
+              backgroundColor: scheme.surfaceContainerHigh,
+              foregroundColor: scheme.onSurface,
+              icon: LucideIcons.pencil,
+            ),
+          if (onDelete != null)
+            SlidableAction(
+              onPressed: (_) => onDelete!(),
+              backgroundColor: scheme.expense.withValues(alpha: 0.16),
+              foregroundColor: scheme.expense,
+              icon: LucideIcons.trash2,
+            ),
+        ],
+      ),
+      child: tile,
     );
   }
 }

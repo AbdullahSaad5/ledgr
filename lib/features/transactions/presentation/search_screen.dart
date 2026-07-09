@@ -8,6 +8,7 @@ import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/features/transactions/presentation/filter_sheet.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
+import 'package:ledgr/features/transactions/presentation/tx_actions.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -111,6 +112,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ? null
                           : categories[tx.categoryId],
                       accountName: accounts[tx.accountId]?.name,
+                      onEdit: () => editTransaction(context, tx.id),
+                      onDelete: () =>
+                          deleteTransactionWithUndo(ref, context, tx.id),
                       onTap: () => TransactionDetailSheet.show(context, tx.id),
                     );
                   },

@@ -117,6 +117,7 @@ class _DebtList extends ConsumerWidget {
   ) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,

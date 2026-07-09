@@ -16,6 +16,7 @@ class TransactionDetailSheet extends ConsumerWidget {
   static Future<void> show(BuildContext context, int id) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,

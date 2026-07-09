@@ -12,6 +12,36 @@ class ReportsRepository {
   final AppDatabase _db;
   final PeriodResolver _resolver;
 
+  /// Re-runs [query] whenever money-affecting tables change, so dashboard
+  /// and report aggregates stay live (PLAN.md: DB is the source of truth).
+  Stream<T> _watch<T>(Future<T> Function() query) async* {
+    yield await query();
+    yield* _db
+        .tableUpdates(
+          TableUpdateQuery.onAllTables([
+            _db.transactions,
+            _db.accounts,
+            _db.categories,
+          ]),
+        )
+        .asyncMap((_) => query());
+  }
+
+  Stream<List<CategorySpend>> watchSpendByCategory(Period period) =>
+      _watch(() => spendByCategory(period));
+
+  Stream<MonthPoint> watchMonthTotals(Period period) =>
+      _watch(() => monthTotals(period));
+
+  Stream<List<PayeeTotal>> watchTopPayees(Period period) =>
+      _watch(() => topPayees(period));
+
+  Stream<List<MonthPoint>> watchMonthlyTrend(Period period) =>
+      _watch(() => monthlyTrend(period));
+
+  Stream<List<NetWorthPoint>> watchNetWorthSeries(Period period) =>
+      _watch(() => netWorthSeries(period));
+
   /// Expense totals per **top-level** category in [period]; subcategory spend
   /// rolls up to its parent. Descending by amount.
   Future<List<CategorySpend>> spendByCategory(Period period) async {

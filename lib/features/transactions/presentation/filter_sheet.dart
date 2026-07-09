@@ -14,6 +14,7 @@ class FilterSheet extends ConsumerStatefulWidget {
   static Future<void> show(BuildContext context) {
     return showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => const FilterSheet(),

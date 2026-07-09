@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +20,7 @@ import 'package:ledgr/features/accounts/presentation/account_form_sheet.dart';
 import 'package:ledgr/features/accounts/presentation/widgets/account_card.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/transactions/presentation/transaction_detail_sheet.dart';
+import 'package:ledgr/features/transactions/presentation/tx_actions.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/transaction_tile.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -43,110 +45,130 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       body: ListView(
-        children: [
-          LedgrHeader(
-            title: l10n.appName,
-            showLogo: true,
-            actions: [
-              SoftIconButton(
-                icon: hidden ? LucideIcons.eyeOff : LucideIcons.eye,
-                tooltip: hidden ? 'Show amounts' : 'Hide amounts',
-                onPressed: () => ref
-                    .read(settingsControllerProvider.notifier)
-                    .toggleAmountsHidden(),
-              ),
-              SoftIconButton(
-                icon: LucideIcons.search,
-                tooltip: 'Search',
-                onPressed: () => context.push('/search'),
-              ),
-              SoftIconButton(
-                icon: LucideIcons.moreVertical,
-                tooltip: 'More',
-                onPressed: () => MenuSheet.show(
-                  context,
-                  items: [
-                    MenuSheetItem(
-                      icon: LucideIcons.handCoins,
-                      label: 'Debts',
-                      subtitle: 'Money lent and borrowed',
-                      onTap: () => context.push('/debts'),
-                    ),
-                    MenuSheetItem(
-                      icon: LucideIcons.repeat,
-                      label: 'Recurring',
-                      subtitle: 'Scheduled transactions',
-                      onTap: () => context.push('/recurring'),
-                    ),
-                    MenuSheetItem(
-                      icon: LucideIcons.calendarClock,
-                      label: 'Upcoming',
-                      subtitle: "What's due next",
-                      onTap: () => context.push('/upcoming'),
-                    ),
-                    MenuSheetItem(
-                      icon: LucideIcons.settings,
-                      label: 'Settings',
-                      subtitle: 'Theme, security, backup',
-                      onTap: () => context.push('/settings'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Gaps.page,
-              Gaps.xs,
-              Gaps.page,
-              0,
-            ),
-            child: _HeroPanel(formatter: formatter, currency: currency),
-          ),
-          SectionHeader(
-            title: 'Accounts',
-            onAction: () => context.push('/accounts'),
-          ),
-          const _AccountsCarousel(),
-          _SpendingSnapshot(formatter: formatter, currency: currency),
-          _BudgetsSnapshot(formatter: formatter, currency: currency),
-          SectionHeader(
-            title: 'Recent activity',
-            onAction: () => context.push('/transactions'),
-          ),
-          if (recent.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(Gaps.xxl),
-              child: Center(
-                child: Text(
-                  'No transactions yet',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+        children:
+            [
+                  LedgrHeader(
+                    title: l10n.appName,
+                    showLogo: true,
+                    actions: [
+                      SoftIconButton(
+                        icon: hidden ? LucideIcons.eyeOff : LucideIcons.eye,
+                        tooltip: hidden ? 'Show amounts' : 'Hide amounts',
+                        onPressed: () => ref
+                            .read(settingsControllerProvider.notifier)
+                            .toggleAmountsHidden(),
+                      ),
+                      SoftIconButton(
+                        icon: LucideIcons.search,
+                        tooltip: 'Search',
+                        onPressed: () => context.push('/search'),
+                      ),
+                      SoftIconButton(
+                        icon: LucideIcons.moreVertical,
+                        tooltip: 'More',
+                        onPressed: () => MenuSheet.show(
+                          context,
+                          items: [
+                            MenuSheetItem(
+                              icon: LucideIcons.handCoins,
+                              label: 'Debts',
+                              subtitle: 'Money lent and borrowed',
+                              onTap: () => context.push('/debts'),
+                            ),
+                            MenuSheetItem(
+                              icon: LucideIcons.repeat,
+                              label: 'Recurring',
+                              subtitle: 'Scheduled transactions',
+                              onTap: () => context.push('/recurring'),
+                            ),
+                            MenuSheetItem(
+                              icon: LucideIcons.calendarClock,
+                              label: 'Upcoming',
+                              subtitle: "What's due next",
+                              onTap: () => context.push('/upcoming'),
+                            ),
+                            MenuSheetItem(
+                              icon: LucideIcons.settings,
+                              label: 'Settings',
+                              subtitle: 'Theme, security, backup',
+                              onTap: () => context.push('/settings'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Gaps.sm),
-              child: Column(
-                children: [
-                  for (final tx in recent.take(6))
-                    TransactionTile(
-                      transaction: tx,
-                      formatter: formatter,
-                      category: tx.categoryId == null
-                          ? null
-                          : categories[tx.categoryId],
-                      accountName: accountMap[tx.accountId]?.name,
-                      onTap: () => TransactionDetailSheet.show(context, tx.id),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Gaps.page,
+                      Gaps.xs,
+                      Gaps.page,
+                      0,
                     ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 120),
-        ],
+                    child: _HeroPanel(formatter: formatter, currency: currency),
+                  ),
+                  SectionHeader(
+                    title: 'Accounts',
+                    onAction: () => context.push('/accounts'),
+                  ),
+                  const _AccountsCarousel(),
+                  _SpendingSnapshot(formatter: formatter, currency: currency),
+                  _BudgetsSnapshot(formatter: formatter, currency: currency),
+                  SectionHeader(
+                    title: 'Recent activity',
+                    onAction: () => context.push('/transactions'),
+                  ),
+                  if (recent.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(Gaps.xxl),
+                      child: Center(
+                        child: Text(
+                          'No transactions yet',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Gaps.sm),
+                      child: Column(
+                        children: [
+                          for (final tx in recent.take(6))
+                            TransactionTile(
+                              transaction: tx,
+                              formatter: formatter,
+                              category: tx.categoryId == null
+                                  ? null
+                                  : categories[tx.categoryId],
+                              accountName: accountMap[tx.accountId]?.name,
+                              onEdit: () => editTransaction(context, tx.id),
+                              onDelete: () => deleteTransactionWithUndo(
+                                ref,
+                                context,
+                                tx.id,
+                              ),
+                              onTap: () =>
+                                  TransactionDetailSheet.show(context, tx.id),
+                            ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 120),
+                ]
+                // Gentle staggered entrance for the dashboard sections.
+                .animate(interval: 40.ms)
+                .fadeIn(duration: 240.ms, curve: Curves.easeOut)
+                .slideY(
+                  begin: 0.05,
+                  end: 0,
+                  duration: 280.ms,
+                  curve: Curves.easeOutCubic,
+                ),
       ),
     );
   }

@@ -95,6 +95,9 @@ Widget _wrap(AppDatabase db, Widget screen) {
 }
 
 Future<void> _teardown(WidgetTester tester) async {
+  // Let staggered entrance animations (flutter_animate) finish their
+  // delayed timers before the tree is torn down.
+  await tester.pump(const Duration(seconds: 1));
   await tester.pumpWidget(const SizedBox());
   await tester.pumpAndSettle();
 }

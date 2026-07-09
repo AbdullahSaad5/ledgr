@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import 'package:ledgr/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
 import 'package:ledgr/features/security/presentation/lock_screen.dart';
 import 'package:ledgr/l10n/generated/app_localizations.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 /// Application root: wires dynamic color, Material 3 themes, localization, the
 /// router, and the app-lock gate.
@@ -30,6 +32,23 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initQuickActions();
+  }
+
+  /// Launcher long-press shortcut: jump straight into the keypad.
+  void _initQuickActions() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      const QuickActions()
+        ..initialize((type) {
+          if (type == 'log_expense') _router.push('/tx/new');
+        })
+        ..setShortcutItems(const [
+          ShortcutItem(type: 'log_expense', localizedTitle: 'Log expense'),
+        ]);
+    } on Exception catch (_) {
+      // Shortcuts are best-effort; never block startup.
+    }
   }
 
   @override

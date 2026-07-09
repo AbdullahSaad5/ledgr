@@ -47,8 +47,13 @@ GoRouter createRouter() {
     navigatorKey: _rootKey,
     initialLocation: AppRoute.home.path,
     routes: [
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (context, state, shell) => NavShell(navigationShell: shell),
+        navigatorContainerBuilder: (context, shell, children) =>
+            _AnimatedBranchContainer(
+              currentIndex: shell.currentIndex,
+              children: children,
+            ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -160,4 +165,44 @@ GoRouter createRouter() {
       ),
     ],
   );
+}
+
+/// Cross-fades between tab branches (a lightweight fade-through) while
+/// keeping every branch Navigator alive, mirroring IndexedStack semantics.
+class _AnimatedBranchContainer extends StatelessWidget {
+  const _AnimatedBranchContainer({
+    required this.currentIndex,
+    required this.children,
+  });
+
+  final int currentIndex;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        for (final (i, child) in children.indexed)
+          IgnorePointer(
+            ignoring: i != currentIndex,
+            child: TickerMode(
+              enabled: i == currentIndex,
+              child: AnimatedSlide(
+                offset: i == currentIndex
+                    ? Offset.zero
+                    : const Offset(0, 0.015),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: AnimatedOpacity(
+                  opacity: i == currentIndex ? 1 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

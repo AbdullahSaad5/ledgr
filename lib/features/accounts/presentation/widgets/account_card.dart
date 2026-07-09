@@ -97,13 +97,16 @@ class AccountCard extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              AmountText(
-                balance,
-                formatter: formatter,
-                tone: balanceMinor < 0
-                    ? AmountTone.expense
-                    : AmountTone.neutral,
-                style: text.titleLarge,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: AmountText(
+                  balance,
+                  formatter: formatter,
+                  tone: balanceMinor < 0
+                      ? AmountTone.expense
+                      : AmountTone.neutral,
+                  style: text.titleLarge,
+                ),
               ),
               if (account.creditLimitMinor != null) ...[
                 const SizedBox(height: Gaps.sm),
