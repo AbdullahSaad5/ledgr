@@ -15,6 +15,7 @@ class AppSettings {
     this.biometricEnabled = false,
     this.lockTimeoutMinutes = 0,
     this.notificationsEnabled = true,
+    this.autoBackupEnabled = false,
     this.amountsHidden = false,
     this.onboardingComplete = false,
   });
@@ -29,6 +30,9 @@ class AppSettings {
   final bool biometricEnabled;
   final int lockTimeoutMinutes;
   final bool notificationsEnabled;
+
+  /// Daily local JSON snapshot via workmanager (#17).
+  final bool autoBackupEnabled;
   final bool amountsHidden;
   final bool onboardingComplete;
 
@@ -43,6 +47,7 @@ class AppSettings {
     bool? biometricEnabled,
     int? lockTimeoutMinutes,
     bool? notificationsEnabled,
+    bool? autoBackupEnabled,
     bool? amountsHidden,
     bool? onboardingComplete,
   }) {
@@ -57,6 +62,7 @@ class AppSettings {
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       lockTimeoutMinutes: lockTimeoutMinutes ?? this.lockTimeoutMinutes,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      autoBackupEnabled: autoBackupEnabled ?? this.autoBackupEnabled,
       amountsHidden: amountsHidden ?? this.amountsHidden,
       onboardingComplete: onboardingComplete ?? this.onboardingComplete,
     );

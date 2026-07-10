@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money_x.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -9,6 +13,7 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/features/attachments/data/attachment_repository.dart';
 import 'package:ledgr/features/transactions/presentation/tx_actions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -144,6 +149,8 @@ class TransactionDetailSheet extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: Gaps.md),
+              _ReceiptsSection(transactionId: tx.id),
               const SizedBox(height: Gaps.lg),
               Row(
                 children: [
@@ -260,6 +267,184 @@ class _ActionTile extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Receipt photos attached to this transaction: thumbnail strip plus an
+/// add tile (camera or gallery). Images live in app-private storage — see
+/// AttachmentRepository.
+class _ReceiptsSection extends ConsumerWidget {
+  const _ReceiptsSection({required this.transactionId});
+
+  final int transactionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final attachments =
+        ref.watch(attachmentsProvider(transactionId)).valueOrNull ??
+        const <Attachment>[];
+    final repo = ref.read(attachmentRepositoryProvider);
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Receipts',
+          style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: Gaps.sm),
+        SizedBox(
+          height: 72,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (final a in attachments)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: Gaps.sm),
+                  child: _ReceiptThumb(attachment: a, repo: repo),
+                ),
+              InkWell(
+                customBorder: RoundedSuperellipseBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                onTap: () => _pickAndAttach(context, ref),
+                child: Container(
+                  width: 72,
+                  decoration: ShapeDecoration(
+                    color: scheme.surfaceContainer,
+                    shape: RoundedSuperellipseBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Icon(
+                    LucideIcons.imagePlus,
+                    size: 20,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickAndAttach(BuildContext context, WidgetRef ref) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.camera, size: 20),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image, size: 20),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 2000,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    await ref
+        .read(attachmentRepositoryProvider)
+        .add(transactionId, sourcePath: picked.path);
+  }
+}
+
+class _ReceiptThumb extends ConsumerWidget {
+  const _ReceiptThumb({required this.attachment, required this.repo});
+
+  final Attachment attachment;
+  final AttachmentRepository repo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    return FutureBuilder<File>(
+      future: repo.fileFor(attachment),
+      builder: (context, snapshot) {
+        final file = snapshot.data;
+        if (file == null || !file.existsSync()) {
+          return Container(
+            width: 72,
+            decoration: ShapeDecoration(
+              color: scheme.surfaceContainer,
+              shape: RoundedSuperellipseBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          );
+        }
+        return InkWell(
+          customBorder: RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          onTap: () => _view(context, ref, file),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.file(file, width: 72, height: 72, fit: BoxFit.cover),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _view(BuildContext context, WidgetRef ref, File file) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.all(Gaps.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.7,
+              ),
+              child: InteractiveViewer(child: Image.file(file)),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    await ref
+                        .read(attachmentRepositoryProvider)
+                        .remove(attachment.id);
+                    if (dialogContext.mounted) {
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                  icon: const Icon(LucideIcons.trash2, size: 16),
+                  label: const Text('Remove'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

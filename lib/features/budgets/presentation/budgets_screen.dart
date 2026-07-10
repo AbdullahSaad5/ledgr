@@ -197,6 +197,26 @@ class _BudgetTile extends StatelessWidget {
                                   : scheme.onSurfaceVariant,
                             ),
                           ),
+                          if (progress.carryMinor != 0)
+                            Builder(
+                              builder: (context) {
+                                final carry = formatter.format(
+                                  Money(
+                                    minor: progress.carryMinor.abs(),
+                                    currency: currency,
+                                  ),
+                                );
+                                final up = progress.carryMinor > 0;
+                                return Text(
+                                  up
+                                      ? '$carry rolled over'
+                                      : '$carry overspent before',
+                                  style: text.labelSmall?.copyWith(
+                                    color: up ? scheme.income : scheme.expense,
+                                  ),
+                                );
+                              },
+                            ),
                         ],
                       ),
                     ),

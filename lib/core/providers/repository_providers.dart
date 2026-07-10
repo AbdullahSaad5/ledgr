@@ -6,10 +6,12 @@ import 'package:ledgr/core/providers/database_provider.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/features/accounts/data/account_repository.dart';
+import 'package:ledgr/features/attachments/data/attachment_repository.dart';
 import 'package:ledgr/features/backup/data/backup_service.dart';
 import 'package:ledgr/features/budgets/data/budget_alert_service.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/categories/data/category_repository.dart';
+import 'package:ledgr/features/debts/data/debt_reminder_service.dart';
 import 'package:ledgr/features/debts/data/debt_repository.dart';
 import 'package:ledgr/features/recurring/data/recurring_repository.dart';
 import 'package:ledgr/features/reports/data/reports_repository.dart';
@@ -34,8 +36,22 @@ final tagRepositoryProvider = Provider<TagRepository>(
   (ref) => TagRepository(ref.watch(databaseProvider)),
 );
 
+final attachmentRepositoryProvider = Provider<AttachmentRepository>(
+  (ref) => AttachmentRepository(ref.watch(databaseProvider)),
+);
+
+/// Receipt images for one transaction, live.
+final attachmentsProvider = StreamProvider.family<List<Attachment>, int>(
+  (ref, transactionId) => ref
+      .watch(attachmentRepositoryProvider)
+      .watchForTransaction(transactionId),
+);
+
 final budgetRepositoryProvider = Provider<BudgetRepository>(
-  (ref) => BudgetRepository(ref.watch(databaseProvider)),
+  (ref) => BudgetRepository(
+    ref.watch(databaseProvider),
+    ref.watch(periodResolverProvider),
+  ),
 );
 
 final reportsRepositoryProvider = Provider<ReportsRepository>(
@@ -79,6 +95,14 @@ final debtsByDirectionProvider =
 
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(),
+);
+
+final debtReminderServiceProvider = Provider<DebtReminderService>(
+  (ref) => DebtReminderService(
+    ref.watch(databaseProvider),
+    ref.watch(notificationServiceProvider),
+    ref.watch(moneyFormatterProvider),
+  ),
 );
 
 final budgetAlertServiceProvider = Provider<BudgetAlertService>(

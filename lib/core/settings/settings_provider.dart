@@ -22,6 +22,7 @@ class SettingsController extends Notifier<AppSettings> {
   static const _kTimeout = 'lockTimeoutMinutes';
   static const _kNotifications = 'notificationsEnabled';
   static const _kOnboarding = 'onboardingComplete';
+  static const _kAutoBackup = 'autoBackupEnabled';
 
   SharedPreferences? get _prefs => ref.read(sharedPreferencesProvider);
 
@@ -43,6 +44,7 @@ class SettingsController extends Notifier<AppSettings> {
       notificationsEnabled:
           p.getBool(_kNotifications) ?? d.notificationsEnabled,
       onboardingComplete: p.getBool(_kOnboarding) ?? d.onboardingComplete,
+      autoBackupEnabled: p.getBool(_kAutoBackup) ?? d.autoBackupEnabled,
     );
   }
 
@@ -90,6 +92,11 @@ class SettingsController extends Notifier<AppSettings> {
   Future<void> setNotificationsEnabled({required bool enabled}) async {
     await _prefs?.setBool(_kNotifications, enabled);
     state = state.copyWith(notificationsEnabled: enabled);
+  }
+
+  Future<void> setAutoBackupEnabled({required bool enabled}) async {
+    await _prefs?.setBool(_kAutoBackup, enabled);
+    state = state.copyWith(autoBackupEnabled: enabled);
   }
 
   Future<void> setOnboardingComplete() async {

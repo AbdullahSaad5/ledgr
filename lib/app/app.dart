@@ -5,8 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:ledgr/app/router.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/home_widget/home_widget_sync.dart';
+import 'package:ledgr/core/money/money.dart';
+import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
@@ -33,6 +37,22 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initQuickActions();
+    _initHomeWidget();
+  }
+
+  /// Home-screen widget: the + button deep-links into the keypad.
+  void _initHomeWidget() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      HomeWidget.initiallyLaunchedFromHomeWidget().then(_onWidgetUri);
+      HomeWidget.widgetClicked.listen(_onWidgetUri);
+    } on Exception catch (_) {
+      // Widget plumbing is best-effort; never block startup.
+    }
+  }
+
+  void _onWidgetUri(Uri? uri) {
+    if (uri != null && uri.host == 'add') _router.push('/tx/new');
   }
 
   /// Launcher long-press shortcut: jump straight into the keypad.
@@ -78,6 +98,19 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
+    // Keep the home-screen widget's number current with every balance change.
+    ref.listen(activeAccountsProvider, (_, next) {
+      final accounts = next.valueOrNull;
+      if (accounts == null) return;
+      final total = accounts
+          .where((a) => a.account.includeInNetWorth)
+          .fold(0, (s, a) => s + a.balanceMinor);
+      final formatter = ref.read(moneyFormatterProvider);
+      final currency = ref.read(appSettingsProvider).homeCurrency;
+      HomeWidgetSync.push(
+        netWorth: formatter.format(Money(minor: total, currency: currency)),
+      );
+    });
     final seed = Color(settings.seedColor);
     final locked = ref.watch(lockControllerProvider) && settings.lockEnabled;
 

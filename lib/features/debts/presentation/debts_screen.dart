@@ -219,6 +219,7 @@ class _DebtDetailSheetState extends ConsumerState<_DebtDetailSheet> {
     await ref
         .read(debtRepositoryProvider)
         .addPayment(widget.debt, amountMinor: amount, accountId: _accountId);
+    await ref.read(debtReminderServiceProvider).syncAll();
     if (mounted) Navigator.of(context).pop();
   }
 

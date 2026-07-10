@@ -23,7 +23,7 @@ void main() {
       final july = resolver.ofAnchor(2026, 7);
       final accounts = AccountRepository(db);
       final tx = TransactionRepository(db);
-      final budgets = BudgetRepository(db);
+      final budgets = BudgetRepository(db, PeriodResolver(1));
       final reports = ReportsRepository(db, resolver);
       final backup = BackupService(db);
 

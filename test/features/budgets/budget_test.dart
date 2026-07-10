@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgr/core/db/database.dart';
@@ -57,7 +58,7 @@ void main() {
 
     setUp(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
-      repo = BudgetRepository(db);
+      repo = BudgetRepository(db, PeriodResolver(1));
       tx = TransactionRepository(db);
       cash = await AccountRepository(db).create(
         name: 'Cash',
@@ -113,6 +114,65 @@ void main() {
         db.budgets,
       )..where((b) => b.id.equals(id))).getSingle();
       expect(await repo.spentFor(budget, july), 25000);
+    });
+
+    group('rollover (#17)', () {
+      Future<void> expenseOn(int amount, DateTime date) => tx.create(
+        TransactionDraft(
+          type: TxType.expense,
+          amountMinor: amount,
+          currency: 'PKR',
+          accountId: cash,
+          categoryId: 1,
+          date: date,
+        ),
+      );
+
+      Future<Budget> budgetCreatedInJune({required int limit}) async {
+        final id = await repo.create(limitMinor: limit, rollover: true);
+        // Backdate creation so June is the budget's first period.
+        await (db.update(db.budgets)..where((b) => b.id.equals(id))).write(
+          BudgetsCompanion(createdAt: Value(DateTime(2026, 6, 5))),
+        );
+        return (db.select(
+          db.budgets,
+        )..where((b) => b.id.equals(id))).getSingle();
+      }
+
+      test('unspent from previous periods carries forward', () async {
+        final budget = await budgetCreatedInJune(limit: 10000);
+        await expenseOn(6000, DateTime(2026, 6, 10));
+        // June left 4,000 unspent → July's effective limit grows.
+        expect(await repo.carryFor(budget, july), 4000);
+      });
+
+      test('overspend carries as a negative adjustment', () async {
+        final budget = await budgetCreatedInJune(limit: 10000);
+        await expenseOn(13000, DateTime(2026, 6, 10));
+        expect(await repo.carryFor(budget, july), -3000);
+      });
+
+      test('non-rollover budgets never carry', () async {
+        final id = await repo.create(limitMinor: 10000);
+        await expenseOn(1000, DateTime(2026, 6, 10));
+        final budget = await (db.select(
+          db.budgets,
+        )..where((b) => b.id.equals(id))).getSingle();
+        expect(await repo.carryFor(budget, july), 0);
+      });
+
+      test('watchProgress exposes carry and effective limit', () async {
+        await budgetCreatedInJune(limit: 10000);
+        await expenseOn(6000, DateTime(2026, 6, 10));
+        await expenseOn(5000, DateTime(2026, 7, 10));
+
+        final progress = (await repo.watchProgress(july).first).single;
+        expect(progress.carryMinor, 4000);
+        expect(progress.effectiveLimitMinor, 14000);
+        expect(progress.spentMinor, 5000);
+        expect(progress.remainingMinor, 9000);
+        expect(progress.fraction, closeTo(5000 / 14000, 1e-9));
+      });
     });
 
     test(

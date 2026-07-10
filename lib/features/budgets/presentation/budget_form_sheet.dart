@@ -36,6 +36,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   final _limit = TextEditingController();
   int? _categoryId; // null = overall
   bool _overall = true;
+  bool _rollover = false;
 
   bool get _isEditing => widget.budget != null;
 
@@ -46,6 +47,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     if (b != null) {
       _categoryId = b.categoryId;
       _overall = b.categoryId == null;
+      _rollover = b.rollover;
       final currency = ref.read(appSettingsProvider).homeCurrency;
       final digits = MoneyField.parse('1', currency).decimalDigits;
       var factor = 1;
@@ -69,10 +71,12 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     final repo = ref.read(budgetRepositoryProvider);
     if (_isEditing) {
       await repo.updateLimit(widget.budget!.id, limit);
+      await repo.setRollover(widget.budget!.id, rollover: _rollover);
     } else {
       await repo.create(
         categoryId: _overall ? null : _categoryId,
         limitMinor: limit,
+        rollover: _rollover,
       );
     }
     if (mounted) Navigator.of(context).pop();
@@ -235,6 +239,15 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                   label: 'Monthly limit',
                   symbol: settings.currencySymbol,
                 ),
+              ),
+              SwitchListTile(
+                title: const Text('Roll over leftovers'),
+                subtitle: const Text(
+                  'Unspent money raises next month’s limit; '
+                  'overspending lowers it',
+                ),
+                value: _rollover,
+                onChanged: (v) => setState(() => _rollover = v),
               ),
             ],
           ),

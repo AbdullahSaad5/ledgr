@@ -63,6 +63,7 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
           dueDate: _dueDate,
           note: _note.text.trim().isEmpty ? null : _note.text.trim(),
         );
+    await ref.read(debtReminderServiceProvider).syncAll();
     if (mounted) Navigator.of(context).pop();
   }
 

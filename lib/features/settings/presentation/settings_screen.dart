@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,8 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
+import 'package:ledgr/features/backup/data/auto_backup_service.dart';
+import 'package:ledgr/features/backup/data/csv_importer.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
 import 'package:ledgr/features/settings/presentation/pin_setup_sheet.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -257,6 +260,26 @@ class SettingsScreen extends ConsumerWidget {
                     'current data'),
                 onTap: () => _importBackup(context, ref),
               ),
+              SwitchListTile(
+                secondary: lead(LucideIcons.calendarSync),
+                title: const Text('Daily auto-backup'),
+                subtitle: const Text('Keeps the last 7 snapshots on this '
+                    'device — nothing leaves it'),
+                value: settings.autoBackupEnabled,
+                onChanged: (v) => _setAutoBackup(context, ref, enabled: v),
+              ),
+              ListTile(
+                leading: lead(LucideIcons.fileClock),
+                title: const Text('Share latest auto-backup'),
+                onTap: () => _shareLatestAutoBackup(context, ref),
+              ),
+              ListTile(
+                leading: lead(LucideIcons.fileSpreadsheet),
+                title: const Text('Import CSV'),
+                subtitle: const Text('Add transactions from a Ledgr CSV '
+                    'export — duplicates are skipped'),
+                onTap: () => _importCsv(context, ref),
+              ),
               ListTile(
                 leading: lead(LucideIcons.trash2, color: scheme.expense),
                 title: Text(
@@ -384,6 +407,75 @@ class SettingsScreen extends ConsumerWidget {
     final file = File('${dir.path}/ledgr_backup.json');
     await file.writeAsString(json);
     await Share.shareXFiles([XFile(file.path)], subject: 'Ledgr backup');
+  }
+
+  Future<void> _setAutoBackup(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool enabled,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref
+        .read(settingsControllerProvider.notifier)
+        .setAutoBackupEnabled(enabled: enabled);
+    if (enabled) {
+      await const AutoBackupService().enable();
+      // Snapshot right away so the toggle visibly did something.
+      final docs = await getApplicationDocumentsDirectory();
+      await AutoBackupService.snapshot(ref.read(databaseProvider), docs);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Auto-backup on — first snapshot saved')),
+      );
+    } else {
+      await const AutoBackupService().disable();
+    }
+  }
+
+  Future<void> _shareLatestAutoBackup(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final docs = await getApplicationDocumentsDirectory();
+    final latest = await AutoBackupService.latest(docs);
+    if (latest == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No auto-backup yet — turn it on first')),
+      );
+      return;
+    }
+    await Share.shareXFiles([XFile(latest.path)], subject: 'Ledgr backup');
+  }
+
+  Future<void> _importCsv(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final currency = ref.read(appSettingsProvider).homeCurrency;
+    final db = ref.read(databaseProvider);
+
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+    );
+    final path = picked?.files.single.path;
+    if (path == null) return;
+
+    try {
+      final csv = await File(path).readAsString();
+      final summary = await CsvImporter(db).import(csv, currency: currency);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Imported ${summary.imported} transaction'
+            '${summary.imported == 1 ? '' : 's'}'
+            '${summary.skipped > 0 ? ', skipped ${summary.skipped}' : ''}',
+          ),
+        ),
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not import that file: $e')),
+      );
+    }
   }
 
   Future<void> _importBackup(BuildContext context, WidgetRef ref) async {

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/database_provider.dart';
+import 'package:ledgr/core/time/period_resolver.dart';
 import 'package:ledgr/features/accounts/data/account_repository.dart';
 import 'package:ledgr/features/budgets/data/budget_repository.dart';
 import 'package:ledgr/features/budgets/presentation/budgets_screen.dart';
@@ -65,7 +66,7 @@ void main() {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
     await _seed(db);
-    await BudgetRepository(db).create(limitMinor: 100000);
+    await BudgetRepository(db, PeriodResolver(1)).create(limitMinor: 100000);
 
     await tester.pumpWidget(_wrap(db, const BudgetsScreen()));
     await tester.pumpAndSettle();
@@ -196,10 +197,7 @@ void main() {
     // (top payees, composition bars) actually render.
     Future<void> scrollToBottom() async {
       for (var i = 0; i < 4; i++) {
-        await tester.drag(
-          find.byType(Scrollable).first,
-          const Offset(0, -500),
-        );
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
         await tester.pumpAndSettle();
       }
     }
