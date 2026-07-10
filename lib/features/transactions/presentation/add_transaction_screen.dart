@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
@@ -37,6 +38,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   int? _categoryId;
   DateTime _date = DateTime.now();
   final Set<int> _tagIds = {};
+
+  /// Receipt photos picked before the transaction exists; attached on save.
+  final List<String> _stagedReceipts = [];
   bool _loaded = false;
 
   bool get _isEditing => widget.transactionId != null;
@@ -109,6 +113,52 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     setState(() {});
   }
 
+  Future<void> _addReceipt() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.camera, size: 20),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image, size: 20),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+            if (_stagedReceipts.isNotEmpty)
+              ListTile(
+                leading: const Icon(LucideIcons.x, size: 20),
+                title: Text(
+                  'Clear staged receipt'
+                  '${_stagedReceipts.length == 1 ? '' : 's'}',
+                ),
+                onTap: () {
+                  _stagedReceipts.clear();
+                  Navigator.of(sheetContext).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+    setState(() {});
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 2000,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    setState(() => _stagedReceipts.add(picked.path));
+  }
+
   void _hydrate(Transaction tx) {
     if (_loaded) return;
     _loaded = true;
@@ -158,6 +208,11 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       id = await repo.create(draft);
     }
     await ref.read(tagRepositoryProvider).setTagsForTransaction(id, _tagIds);
+    // Staged receipt photos become real attachments now that the id exists.
+    final attachments = ref.read(attachmentRepositoryProvider);
+    for (final path in _stagedReceipts) {
+      await attachments.add(id, sourcePath: path);
+    }
     await HapticFeedback.mediumImpact();
 
     if (draft.type == TxType.expense) {
@@ -266,6 +321,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                                 : 'Tags (${_tagIds.length})',
                             active: _tagIds.isNotEmpty,
                             onTap: _editTags,
+                          ),
+                          const SizedBox(width: 8),
+                          _MetaPill(
+                            icon: LucideIcons.imagePlus,
+                            label: _stagedReceipts.isEmpty
+                                ? 'Receipt'
+                                : 'Receipt (${_stagedReceipts.length})',
+                            active: _stagedReceipts.isNotEmpty,
+                            onTap: _addReceipt,
                           ),
                         ],
                       ),
