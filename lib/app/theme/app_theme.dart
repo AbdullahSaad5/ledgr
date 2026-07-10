@@ -95,6 +95,7 @@ abstract final class AppTheme {
         // Same scale as LedgrHeader so pushed screens don't read smaller
         // than the tab screens.
         titleTextStyle: textTheme.headlineSmall?.copyWith(
+          fontSize: 26,
           fontWeight: FontWeight.w800,
         ),
       ),

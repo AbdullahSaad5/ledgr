@@ -198,8 +198,10 @@ class TransactionDetailSheet extends ConsumerWidget {
             label,
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: Gaps.md),
+          // Expanded (not Spacer + Flexible, which split the free space and
+          // left the value floating mid-row): value hugs the right edge.
+          Expanded(
             child: Text(
               value,
               textAlign: TextAlign.end,
