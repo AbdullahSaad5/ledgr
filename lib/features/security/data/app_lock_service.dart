@@ -14,14 +14,29 @@ class AppLockService {
 
   static const _kSalt = 'pin_salt';
   static const _kHash = 'pin_hash';
+  static const _kLength = 'pin_length';
 
   Future<void> setPin(String pin) async {
     final hashed = PinHasher.hash(pin);
     try {
       await _storage.write(key: _kSalt, value: hashed.salt);
       await _storage.write(key: _kHash, value: hashed.hash);
+      // Length only (not the PIN): the lock screen renders exactly this
+      // many dots instead of always showing six.
+      await _storage.write(key: _kLength, value: '${pin.length}');
     } on Object {
       // ignore: secure storage unavailable
+    }
+  }
+
+  /// How many digits the stored PIN has (defaults to 4 for PINs saved
+  /// before the length was recorded).
+  Future<int> pinLength() async {
+    try {
+      final raw = await _storage.read(key: _kLength);
+      return int.tryParse(raw ?? '') ?? 4;
+    } on Object {
+      return 4;
     }
   }
 
@@ -48,6 +63,7 @@ class AppLockService {
     try {
       await _storage.delete(key: _kSalt);
       await _storage.delete(key: _kHash);
+      await _storage.delete(key: _kLength);
     } on Object {
       // ignore
     }

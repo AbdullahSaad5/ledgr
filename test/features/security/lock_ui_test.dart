@@ -22,6 +22,9 @@ class _FakeLock extends AppLockService {
   Future<bool> verifyPin(String pin) async => pin == _pin;
 
   @override
+  Future<int> pinLength() async => _pin?.length ?? 4;
+
+  @override
   Future<void> clear() async => _pin = null;
 
   @override
@@ -45,6 +48,31 @@ Widget _wrap(Widget child, {required _FakeLock lock, bool locked = false}) {
 }
 
 void main() {
+  testWidgets('lock screen shows exactly as many dots as the PIN has digits', (
+    tester,
+  ) async {
+    final lock = _FakeLock();
+    await lock.setPin('12345');
+
+    await tester.pumpWidget(_wrap(const LockScreen(), lock: lock));
+    await tester.pumpAndSettle();
+
+    // Five dot containers between the title and the keypad (14x14 circles).
+    final dots = tester
+        .widgetList<Container>(find.byType(Container))
+        .where(
+          (c) =>
+              c.constraints?.maxWidth == 14 ||
+              (c.decoration is BoxDecoration &&
+                  (c.decoration! as BoxDecoration).shape == BoxShape.circle),
+        )
+        .length;
+    expect(dots, 5);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('correct PIN unlocks', (tester) async {
     final lock = _FakeLock();
     await lock.setPin('1234');
@@ -92,7 +120,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    for (final d in ['9', '9', '9', '9', '9', '9']) {
+    for (final d in ['9', '9', '9', '9']) {
       await tester.tap(find.widgetWithText(OutlinedButton, d));
       await tester.pump();
     }

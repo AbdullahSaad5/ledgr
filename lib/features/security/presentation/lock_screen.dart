@@ -17,10 +17,15 @@ class LockScreen extends ConsumerStatefulWidget {
 class _LockScreenState extends ConsumerState<LockScreen> {
   String _pin = '';
   bool _error = false;
+  int _pinLength = 4;
 
   @override
   void initState() {
     super.initState();
+    // Render exactly as many dots as the saved PIN has digits.
+    ref.read(appLockServiceProvider).pinLength().then((length) {
+      if (mounted) setState(() => _pinLength = length);
+    });
     if (ref.read(appSettingsProvider).biometricEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _biometric());
     }
@@ -32,16 +37,17 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   }
 
   Future<void> _press(String digit) async {
-    if (_pin.length >= 6) return;
+    if (_pin.length >= _pinLength) return;
     setState(() {
       _pin += digit;
       _error = false;
     });
-    if (_pin.length >= 4) {
+    if (_pin.length == _pinLength) {
       final ok = await ref.read(appLockServiceProvider).verifyPin(_pin);
+      if (!mounted) return;
       if (ok) {
         ref.read(lockControllerProvider.notifier).unlock();
-      } else if (_pin.length == 6) {
+      } else {
         setState(() {
           _error = true;
           _pin = '';
@@ -76,7 +82,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (var i = 0; i < 6; i++)
+                for (var i = 0; i < _pinLength; i++)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 6),
                     width: 14,
