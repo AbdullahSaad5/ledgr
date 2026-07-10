@@ -61,12 +61,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(ref.read(appSettingsProvider).themeMode, ThemeMode.system);
-    // Change month-start-day via the dropdown.
+    // Change month-start-day via the dropdown (1–28; scroll the menu to 25).
     await tester.tap(find.text('1').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('25').last);
+    await tester.dragUntilVisible(
+      find.text('25'),
+      find.byType(Scrollable).last,
+      const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('25'));
     await tester.pumpAndSettle();
     expect(ref.read(appSettingsProvider).monthStartDay, 25);
+
+    // Currency is editable via the picker sheet.
+    await tester.scrollUntilVisible(find.text('Currency'), 80);
+    await tester.tap(find.text('Currency'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(r'USD  ($)'));
+    await tester.pumpAndSettle();
+    expect(ref.read(appSettingsProvider).homeCurrency, 'USD');
+    expect(ref.read(appSettingsProvider).currencySymbol, r'$');
 
     await _teardown(tester);
   });

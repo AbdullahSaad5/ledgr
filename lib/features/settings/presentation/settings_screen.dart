@@ -15,6 +15,22 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+const _currencies = <(String, String)>[
+  ('PKR', 'Rs '),
+  ('USD', r'$'),
+  ('EUR', '€'),
+  ('GBP', '£'),
+  ('INR', '₹'),
+  ('AED', 'AED '),
+];
+
+const _lockTimeouts = <(int, String)>[
+  (0, 'Immediately'),
+  (1, 'After 1 minute'),
+  (5, 'After 5 minutes'),
+  (15, 'After 15 minutes'),
+];
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -65,6 +81,13 @@ class SettingsScreen extends ConsumerWidget {
                 value: settings.dynamicColor,
                 onChanged: (v) => controller.setDynamicColor(enabled: v),
               ),
+              SwitchListTile(
+                secondary: lead(LucideIcons.eyeOff),
+                title: const Text('Hide amounts'),
+                subtitle: const Text('Blur balances until you tap the eye'),
+                value: settings.amountsHidden,
+                onChanged: (_) => controller.toggleAmountsHidden(),
+              ),
             ],
           ),
           GroupCard(
@@ -77,9 +100,10 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: DropdownButton<int>(
                   value: settings.monthStartDay,
                   underline: const SizedBox.shrink(),
+                  menuMaxHeight: 360,
                   onChanged: (d) => controller.setMonthStartDay(d!),
                   items: [
-                    for (final day in [1, 5, 10, 15, 20, 25])
+                    for (var day = 1; day <= 28; day++)
                       DropdownMenuItem(value: day, child: Text('$day')),
                   ],
                 ),
@@ -87,13 +111,22 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: lead(LucideIcons.coins),
                 title: const Text('Currency'),
-                trailing: Text(
-                  '${settings.homeCurrency} '
-                  '(${settings.currencySymbol.trim()})',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                subtitle: const Text("Labels only — amounts aren't converted"),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${settings.homeCurrency} '
+                      '(${settings.currencySymbol.trim()})',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: Gaps.sm),
+                    const Icon(LucideIcons.chevronRight, size: 18),
+                  ],
                 ),
+                onTap: () => _pickCurrency(context, ref),
               ),
             ],
           ),
@@ -118,13 +151,33 @@ class SettingsScreen extends ConsumerWidget {
                   }
                 },
               ),
-              if (settings.lockEnabled)
+              if (settings.lockEnabled) ...[
+                ListTile(
+                  leading: lead(LucideIcons.rectangleEllipsis),
+                  title: const Text('Change PIN'),
+                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                  onTap: () => PinSetupSheet.show(context),
+                ),
+                ListTile(
+                  leading: lead(LucideIcons.timer),
+                  title: const Text('Auto-lock'),
+                  trailing: DropdownButton<int>(
+                    value: settings.lockTimeoutMinutes,
+                    underline: const SizedBox.shrink(),
+                    onChanged: (m) => controller.setLockTimeout(m!),
+                    items: [
+                      for (final (minutes, label) in _lockTimeouts)
+                        DropdownMenuItem(value: minutes, child: Text(label)),
+                    ],
+                  ),
+                ),
                 SwitchListTile(
                   secondary: lead(LucideIcons.fingerprint),
                   title: const Text('Biometric unlock'),
                   value: settings.biometricEnabled,
                   onChanged: (v) => controller.setBiometricEnabled(enabled: v),
                 ),
+              ],
             ],
           ),
           GroupCard(
@@ -156,7 +209,15 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: lead(LucideIcons.upload),
                 title: const Text('Export backup'),
+                subtitle: const Text('Share a JSON file of everything'),
                 onTap: () => _exportBackup(ref),
+              ),
+              ListTile(
+                leading: lead(LucideIcons.download),
+                title: const Text('Import backup'),
+                subtitle: const Text('Restore from a backup — replaces '
+                    'current data'),
+                onTap: () => _importBackup(context, ref),
               ),
               ListTile(
                 leading: lead(LucideIcons.trash2, color: scheme.expense),
@@ -186,12 +247,103 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _pickCurrency(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(settingsControllerProvider.notifier);
+    final current = ref.read(appSettingsProvider).homeCurrency;
+    final picked = await showModalBottomSheet<(String, String)>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: Gaps.sm),
+          children: [
+            for (final c in _currencies)
+              ListTile(
+                leading: IconBadge(
+                  icon: LucideIcons.coins,
+                  color: Theme.of(sheetContext).colorScheme.primary,
+                  size: 38,
+                  iconSize: 17,
+                ),
+                title: Text('${c.$1}  (${c.$2.trim()})'),
+                trailing: c.$1 == current
+                    ? Icon(
+                        LucideIcons.circleCheck,
+                        color: Theme.of(sheetContext).colorScheme.primary,
+                      )
+                    : null,
+                onTap: () => Navigator.of(sheetContext).pop(c),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      await controller.setCurrency(picked.$1, picked.$2);
+    }
+  }
+
   Future<void> _exportBackup(WidgetRef ref) async {
     final json = await ref.read(backupServiceProvider).export();
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/ledgr_backup.json');
     await file.writeAsString(json);
     await Share.shareXFiles([XFile(file.path)], subject: 'Ledgr backup');
+  }
+
+  Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final text = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Import backup'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Open your ledgr_backup.json, copy its contents, and paste '
+              'them below. Importing replaces everything currently in '
+              'the app.',
+            ),
+            const SizedBox(height: Gaps.md),
+            TextField(
+              controller: text,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                hintText: 'Paste backup JSON here',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+    if (!(confirmed ?? false)) {
+      text.dispose();
+      return;
+    }
+    try {
+      await ref.read(backupServiceProvider).import(text.text.trim());
+      messenger.showSnackBar(const SnackBar(content: Text('Backup restored')));
+    } on Exception catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not import backup: $e')),
+      );
+    } finally {
+      text.dispose();
+    }
   }
 
   Future<void> _clearData(BuildContext context, WidgetRef ref) async {
