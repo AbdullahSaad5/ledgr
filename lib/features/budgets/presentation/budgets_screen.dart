@@ -29,15 +29,21 @@ class BudgetsScreen extends ConsumerWidget {
     final categories = ref.watch(categoryMapProvider);
     final currency = ref.watch(appSettingsProvider).homeCurrency;
 
+    // The empty state carries its own Add-budget CTA, so the FAB only shows
+    // once budgets exist; extra bottom padding clears the floating nav pill.
+    final hasBudgets = (progressAsync.valueOrNull ?? const []).isNotEmpty;
+
     return Scaffold(
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 84),
-        child: FloatingActionButton.extended(
-          onPressed: () => BudgetFormSheet.show(context),
-          icon: const Icon(LucideIcons.plus),
-          label: const Text('Budget'),
-        ),
-      ),
+      floatingActionButton: hasBudgets
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 96),
+              child: FloatingActionButton.extended(
+                onPressed: () => BudgetFormSheet.show(context),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('Budget'),
+              ),
+            )
+          : null,
       body: SafeArea(
         bottom: false,
         child: Column(
