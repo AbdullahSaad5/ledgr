@@ -661,11 +661,9 @@ class _BudgetRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final leftLabel = formatter.format(
-      Money(
-        minor: progress.remainingMinor.clamp(0, progress.limitMinor),
-        currency: currency,
-      ),
+    final over = progress.remainingMinor < 0;
+    final amountLabel = formatter.format(
+      Money(minor: progress.remainingMinor.abs(), currency: currency),
     );
 
     return Padding(
@@ -681,9 +679,9 @@ class _BudgetRow extends StatelessWidget {
                 style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
-                '$leftLabel left',
+                over ? '$amountLabel over' : '$amountLabel left',
                 style: text.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
+                  color: over ? scheme.expense : scheme.onSurfaceVariant,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
