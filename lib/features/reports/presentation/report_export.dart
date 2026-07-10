@@ -24,7 +24,14 @@ Future<void> exportPeriodCsv(WidgetRef ref) async {
   final csv = CsvExporter.transactionsToCsv(
     txs,
     accountNames: {for (final e in accounts.entries) e.key: e.value.name},
-    categoryNames: {for (final e in categories.entries) e.key: e.value.name},
+    // Subcategories export as "Parent > Child" so the CSV stays unambiguous
+    // outside the app (#16).
+    categoryNames: {
+      for (final e in categories.entries)
+        e.key: e.value.parentId == null
+            ? e.value.name
+            : '${categories[e.value.parentId]?.name ?? '?'} > ${e.value.name}',
+    },
     formatAmount: (m) => formatter.format(Money(minor: m, currency: currency)),
   );
 

@@ -102,6 +102,16 @@ final spendByCategoryProvider = StreamProvider<List<CategorySpend>>((ref) {
   return ref.watch(reportsRepositoryProvider).watchSpendByCategory(period);
 });
 
+/// Child breakdown of one parent category for the selected period (#16).
+final spendByChildrenProvider = StreamProvider.family<List<CategorySpend>, int>(
+  (ref, parentId) {
+    final period = ref.watch(selectedPeriodProvider);
+    return ref
+        .watch(reportsRepositoryProvider)
+        .watchSpendByChildren(parentId, period);
+  },
+);
+
 final monthTotalsProvider = StreamProvider<MonthPoint>((ref) {
   final period = ref.watch(selectedPeriodProvider);
   return ref.watch(reportsRepositoryProvider).watchMonthTotals(period);

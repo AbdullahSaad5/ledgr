@@ -11,15 +11,37 @@ void main() {
   tearDown(() => db.close());
 
   group('schema + seed', () {
-    test('schema version is 3 (unix datetime storage)', () {
-      expect(db.schemaVersion, 3);
+    test('schema version is 4 (Bills subcategories)', () {
+      expect(db.schemaVersion, 4);
     });
 
-    test('seeds default categories (18 expense + 7 income)', () async {
+    test('seeds default categories (18+5 expense + 7 income)', () async {
       final all = await db.select(db.categories).get();
-      expect(all.where((c) => c.kind == CategoryKind.expense).length, 18);
+      expect(all.where((c) => c.kind == CategoryKind.expense).length, 23);
       expect(all.where((c) => c.kind == CategoryKind.income).length, 7);
       expect(all.every((c) => c.isDefault), isTrue);
+    });
+
+    test('seeds utility subcategories under Bills & Utilities (#16)', () async {
+      final all = await db.select(db.categories).get();
+      final bills = all.firstWhere((c) => c.name == 'Bills & Utilities');
+      final children = all.where((c) => c.parentId == bills.id).toList();
+      expect(children.map((c) => c.name).toSet(), {
+        'Electricity',
+        'Gas',
+        'Water',
+        'Internet',
+        'Mobile',
+      });
+      expect(
+        children.every((c) => c.kind == CategoryKind.expense && c.isDefault),
+        isTrue,
+      );
+      // One level only: no other seeded category has a parent.
+      final others = all.where(
+        (c) => c.parentId != null && c.parentId != bills.id,
+      );
+      expect(others, isEmpty);
     });
 
     test('sync columns are populated on insert', () async {

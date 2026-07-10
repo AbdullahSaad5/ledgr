@@ -57,8 +57,8 @@ void main() {
     expect(txs.single.amountMinor, 15050);
     expect(txs.single.payee, 'Cafe');
 
-    // Seeded categories (25) restored.
-    expect(await db.select(db.categories).get(), hasLength(25));
+    // Seeded categories (30) restored.
+    expect(await db.select(db.categories).get(), hasLength(30));
   });
 
   test('rejects an unknown version', () async {

@@ -74,6 +74,43 @@ class ReportsRepository {
     return result;
   }
 
+  Stream<List<CategorySpend>> watchSpendByChildren(
+    int parentId,
+    Period period,
+  ) => _watch(() => spendByChildren(parentId, period));
+
+  /// Expense totals inside one parent category in [period]: one row per
+  /// subcategory, plus a row keyed by [parentId] itself for spend logged
+  /// directly on the parent. Descending by amount; zero-spend children are
+  /// omitted.
+  Future<List<CategorySpend>> spendByChildren(
+    int parentId,
+    Period period,
+  ) async {
+    final children = await (_db.select(
+      _db.categories,
+    )..where((c) => c.parentId.equals(parentId) & c.deletedAt.isNull())).get();
+    final ids = {parentId, ...children.map((c) => c.id)};
+
+    final amount = _db.transactions.amountMinor.sum();
+    final catId = _db.transactions.categoryId;
+    final rows =
+        await (_db.selectOnly(_db.transactions)
+              ..addColumns([catId, amount])
+              ..where(_expenseIn(period) & catId.isIn(ids))
+              ..groupBy([catId]))
+            .get();
+
+    final result = [
+      for (final r in rows)
+        CategorySpend(
+          categoryId: r.read(catId)!,
+          totalMinor: r.read(amount) ?? 0,
+        ),
+    ]..sort((a, b) => b.totalMinor.compareTo(a.totalMinor));
+    return result;
+  }
+
   /// Income and expense totals for [period] (transfers/adjustments excluded).
   Future<MonthPoint> monthTotals(Period period) async {
     return MonthPoint(

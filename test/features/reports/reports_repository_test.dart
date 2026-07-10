@@ -75,6 +75,45 @@ void main() {
     expect(spend.first.categoryId, bills);
   });
 
+  test(
+    'spendByChildren splits a parent into children plus direct spend',
+    () async {
+      final categories = CategoryRepository(db);
+      final bills = await categories.create(
+        name: 'Bills',
+        kind: CategoryKind.expense,
+        icon: 'receipt_long',
+        color: 0xFF000000,
+      );
+      final electricity = await categories.create(
+        name: 'Electricity',
+        kind: CategoryKind.expense,
+        icon: 'bolt',
+        color: 0xFF000000,
+        parentId: bills,
+      );
+      final gas = await categories.create(
+        name: 'Gas',
+        kind: CategoryKind.expense,
+        icon: 'flame',
+        color: 0xFF000000,
+        parentId: bills,
+      );
+      await expense(3000, bills); // direct on the parent
+      await expense(5000, electricity);
+      await expense(1000, gas);
+      await expense(9000, 1); // unrelated category, must not appear
+
+      final rows = await reports.spendByChildren(bills, july);
+      // Descending; direct parent spend keeps the parent's own id.
+      expect(rows.map((r) => (r.categoryId, r.totalMinor)).toList(), [
+        (electricity, 5000),
+        (bills, 3000),
+        (gas, 1000),
+      ]);
+    },
+  );
+
   test('monthTotals sums income and expense, ignoring other months', () async {
     await tx.create(
       TransactionDraft(

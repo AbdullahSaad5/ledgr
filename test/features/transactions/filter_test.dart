@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/features/accounts/data/account_repository.dart';
+import 'package:ledgr/features/categories/data/category_repository.dart';
 import 'package:ledgr/features/tags/data/tag_repository.dart';
 import 'package:ledgr/features/transactions/data/transaction_repository.dart';
 import 'package:ledgr/features/transactions/domain/transaction_draft.dart';
@@ -114,6 +115,36 @@ void main() {
     final res = await filter(TransactionFilter(tagIds: {work.id}));
     expect(res.map((t) => t.amountMinor), containsAll([100, 200]));
     expect(res.length, 2);
+  });
+
+  test('category filter on a parent also matches its subcategories', () async {
+    final categories = CategoryRepository(db);
+    final bills = await categories.create(
+      name: 'Bills',
+      kind: CategoryKind.expense,
+      icon: 'receipt_long',
+      color: 0xFF000000,
+    );
+    final electricity = await categories.create(
+      name: 'Electricity',
+      kind: CategoryKind.expense,
+      icon: 'bolt',
+      color: 0xFF000000,
+      parentId: bills,
+    );
+    await make(account: cash, amount: 100, category: bills);
+    await make(account: cash, amount: 200, category: electricity);
+    await make(account: cash, amount: 300); // unrelated category
+
+    final byParent = await filter(TransactionFilter(categoryIds: {bills}));
+    expect(byParent.map((t) => t.amountMinor), containsAll([100, 200]));
+    expect(byParent.length, 2);
+
+    // Filtering by the child alone stays narrow.
+    final byChild = await filter(
+      TransactionFilter(categoryIds: {electricity}),
+    );
+    expect(byChild.map((t) => t.amountMinor), [200]);
   });
 
   test('empty filter returns everything', () async {

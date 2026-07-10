@@ -8,23 +8,37 @@ import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/color_swatches.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Create or edit a category, as a full screen.
 class CategoryFormSheet extends ConsumerStatefulWidget {
-  const CategoryFormSheet({required this.kind, this.category, super.key});
+  const CategoryFormSheet({
+    required this.kind,
+    this.category,
+    this.initialParentId,
+    super.key,
+  });
 
   final CategoryKind kind;
   final Category? category;
+
+  /// Pre-selected parent for the "Add subcategory" entry point (#16).
+  final int? initialParentId;
 
   static Future<void> show(
     BuildContext context, {
     required CategoryKind kind,
     Category? category,
+    int? initialParentId,
   }) {
     return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => CategoryFormSheet(kind: kind, category: category),
+        builder: (_) => CategoryFormSheet(
+          kind: kind,
+          category: category,
+          initialParentId: initialParentId,
+        ),
       ),
     );
   }
@@ -40,6 +54,7 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
   late String _icon =
       widget.category?.icon ?? AppIcons.categoryPickerNames.first;
   late int _color = widget.category?.color ?? AppColors.swatches.first;
+  late int? _parentId = widget.category?.parentId ?? widget.initialParentId;
 
   bool get _isEditing => widget.category != null;
 
@@ -59,6 +74,7 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
         name: name,
         icon: _icon,
         color: _color,
+        parentId: _parentId,
       );
     } else {
       await repo.create(
@@ -66,6 +82,7 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
         kind: widget.kind,
         icon: _icon,
         color: _color,
+        parentId: _parentId,
       );
     }
     if (mounted) Navigator.of(context).pop();
@@ -109,6 +126,12 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
                 ),
               ),
             ],
+          ),
+          _ParentCard(
+            kind: widget.kind,
+            editingId: widget.category?.id,
+            parentId: _parentId,
+            onChanged: (id) => setState(() => _parentId = id),
           ),
           GroupCard(
             title: 'Icon',
@@ -172,6 +195,88 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Optional parent selection (#16). Hidden while the category being edited
+/// has children of its own — nesting is one level, so a parent can't become
+/// a child until its children are moved out.
+class _ParentCard extends ConsumerWidget {
+  const _ParentCard({
+    required this.kind,
+    required this.editingId,
+    required this.parentId,
+    required this.onChanged,
+  });
+
+  final CategoryKind kind;
+  final int? editingId;
+  final int? parentId;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories =
+        ref.watch(categoriesByKindProvider(kind)).valueOrNull ?? const [];
+    final hasChildren =
+        editingId != null && categories.any((c) => c.parentId == editingId);
+    if (hasChildren) return const SizedBox.shrink();
+
+    final options = categories
+        .where((c) => c.parentId == null && c.id != editingId)
+        .toList();
+    if (options.isEmpty) return const SizedBox.shrink();
+
+    final matches = options.where((c) => c.id == parentId);
+    final selected = matches.isEmpty ? null : matches.first;
+
+    return GroupCard(
+      title: 'Parent category',
+      children: [
+        ListTile(
+          leading: selected == null
+              ? const Icon(LucideIcons.folderTree, size: 20)
+              : IconBadge(
+                  icon: AppIcons.resolve(selected.icon),
+                  color: Color(selected.color),
+                  size: 34,
+                  iconSize: 16,
+                ),
+          title: Text(selected?.name ?? 'None (top-level)'),
+          trailing: const Icon(LucideIcons.chevronRight, size: 18),
+          onTap: () async {
+            final picked = await showModalBottomSheet<(int?,)>(
+              context: context,
+              useRootNavigator: true,
+              builder: (sheetContext) => SafeArea(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      leading: const Icon(LucideIcons.folderTree, size: 20),
+                      title: const Text('None (top-level)'),
+                      onTap: () => Navigator.of(sheetContext).pop((null,)),
+                    ),
+                    for (final c in options)
+                      ListTile(
+                        leading: IconBadge(
+                          icon: AppIcons.resolve(c.icon),
+                          color: Color(c.color),
+                          size: 34,
+                          iconSize: 16,
+                        ),
+                        title: Text(c.name),
+                        onTap: () => Navigator.of(sheetContext).pop((c.id,)),
+                      ),
+                  ],
+                ),
+              ),
+            );
+            if (picked != null) onChanged(picked.$1);
+          },
+        ),
+      ],
     );
   }
 }

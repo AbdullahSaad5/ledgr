@@ -55,43 +55,85 @@ class _CategoryList extends ConsumerWidget {
       body: categoriesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
-        data: (categories) => ListView(
-          children: [
-            for (final c in categories)
-              ListTile(
-                leading: IconBadge(
-                  icon: AppIcons.resolve(c.icon),
-                  color: Color(c.color),
-                  iconSize: 19,
-                ),
-                title: Text(c.name),
-                trailing: IconButton(
-                  icon: const Icon(LucideIcons.moreVertical, size: 18),
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => MenuSheet.show(
+        data: (categories) {
+          // Children render nested under their parent (one level, #16).
+          final parents = categories.where((c) => c.parentId == null).toList();
+          final childrenOf = <int, List<Category>>{};
+          for (final c in categories) {
+            final p = c.parentId;
+            if (p != null) childrenOf.putIfAbsent(p, () => []).add(c);
+          }
+          return ListView(
+            children: [
+              for (final parent in parents) ...[
+                _categoryTile(context, ref, parent, categories, childrenOf),
+                for (final child in childrenOf[parent.id] ?? const <Category>[])
+                  _categoryTile(
                     context,
-                    title: c.name,
-                    items: [
-                      MenuSheetItem(
-                        icon: LucideIcons.pencil,
-                        label: 'Edit',
-                        onTap: () => CategoryFormSheet.show(
-                          context,
-                          kind: kind,
-                          category: c,
-                        ),
-                      ),
-                      MenuSheetItem(
-                        icon: LucideIcons.trash2,
-                        label: 'Delete',
-                        onTap: () =>
-                            _confirmDelete(context, ref, c, categories),
-                      ),
-                    ],
+                    ref,
+                    child,
+                    categories,
+                    childrenOf,
+                    indented: true,
                   ),
+              ],
+              const SizedBox(height: 80),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _categoryTile(
+    BuildContext context,
+    WidgetRef ref,
+    Category c,
+    List<Category> categories,
+    Map<int, List<Category>> childrenOf, {
+    bool indented = false,
+  }) {
+    final isParent = !indented;
+    return ListTile(
+      contentPadding: indented
+          ? const EdgeInsetsDirectional.only(start: 40, end: 16)
+          : null,
+      leading: IconBadge(
+        icon: AppIcons.resolve(c.icon),
+        color: Color(c.color),
+        size: indented ? 34 : 40,
+        iconSize: indented ? 16 : 19,
+      ),
+      title: Text(c.name),
+      trailing: IconButton(
+        icon: const Icon(LucideIcons.moreVertical, size: 18),
+        visualDensity: VisualDensity.compact,
+        onPressed: () => MenuSheet.show(
+          context,
+          title: c.name,
+          items: [
+            MenuSheetItem(
+              icon: LucideIcons.pencil,
+              label: 'Edit',
+              onTap: () =>
+                  CategoryFormSheet.show(context, kind: kind, category: c),
+            ),
+            // One-level nesting: only top-level categories take children.
+            if (isParent)
+              MenuSheetItem(
+                icon: LucideIcons.plus,
+                label: 'Add subcategory',
+                onTap: () => CategoryFormSheet.show(
+                  context,
+                  kind: kind,
+                  initialParentId: c.id,
                 ),
               ),
-            const SizedBox(height: 80),
+            MenuSheetItem(
+              icon: LucideIcons.trash2,
+              label: 'Delete',
+              onTap: () => _confirmDelete(context, ref, c, categories),
+            ),
           ],
         ),
       ),

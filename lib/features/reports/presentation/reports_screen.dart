@@ -191,48 +191,15 @@ class _OverviewTab extends ConsumerWidget {
                           ),
                           const SizedBox(height: Gaps.md),
                           for (final e in items)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 5),
-                              child: Row(
-                                children: [
-                                  IconBadge(
-                                    icon: AppIcons.resolve(
-                                      categories[e.categoryId]?.icon ??
-                                          'category',
-                                    ),
-                                    color: Color(
-                                      categories[e.categoryId]?.color ??
-                                          0xFF9E9E9E,
-                                    ),
-                                    size: 32,
-                                    iconSize: 15,
-                                  ),
-                                  const SizedBox(width: Gaps.md),
-                                  Expanded(
-                                    child: Text(
-                                      categories[e.categoryId]?.name ??
-                                          'Uncategorized',
-                                      style: text.bodyMedium,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${(e.totalMinor / total * 100).round()}%',
-                                    style: text.labelSmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  const SizedBox(width: Gaps.sm),
-                                  AmountText(
-                                    Money(
-                                      minor: e.totalMinor,
-                                      currency: currency,
-                                    ),
-                                    formatter: formatter,
-                                    style: text.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
+                            _SpendRow(
+                              spend: e,
+                              total: total,
+                              currency: currency,
+                              formatter: formatter,
+                              category: categories[e.categoryId],
+                              // Only parents with subcategories drill down.
+                              hasChildren: categories.values.any(
+                                (c) => c.parentId == e.categoryId,
                               ),
                             ),
                         ],
@@ -1062,6 +1029,169 @@ class _CategoryShift extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// One row of the "Spending by category" list. Parents with subcategories
+/// open a child breakdown sheet on tap (#16).
+class _SpendRow extends StatelessWidget {
+  const _SpendRow({
+    required this.spend,
+    required this.total,
+    required this.currency,
+    required this.formatter,
+    required this.category,
+    required this.hasChildren,
+  });
+
+  final CategorySpend spend;
+  final int total;
+  final String currency;
+  final MoneyFormatter formatter;
+  final Category? category;
+  final bool hasChildren;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          IconBadge(
+            icon: AppIcons.resolve(category?.icon ?? 'category'),
+            color: Color(category?.color ?? 0xFF9E9E9E),
+            size: 32,
+            iconSize: 15,
+          ),
+          const SizedBox(width: Gaps.md),
+          Expanded(
+            child: Text(
+              category?.name ?? 'Uncategorized',
+              style: text.bodyMedium,
+            ),
+          ),
+          if (hasChildren) ...[
+            Icon(
+              LucideIcons.chevronRight,
+              size: 14,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: Gaps.sm),
+          ],
+          Text(
+            '${(spend.totalMinor / total * 100).round()}%',
+            style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: Gaps.sm),
+          AmountText(
+            Money(minor: spend.totalMinor, currency: currency),
+            formatter: formatter,
+            style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+
+    if (!hasChildren || category == null) return row;
+    return InkWell(
+      onTap: () => _showChildBreakdown(context, category!),
+      child: row,
+    );
+  }
+
+  void _showChildBreakdown(BuildContext context, Category parent) {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (_) => SafeArea(
+        child: Consumer(
+          builder: (context, ref, _) {
+            final rows =
+                ref.watch(spendByChildrenProvider(parent.id)).valueOrNull ??
+                const <CategorySpend>[];
+            final categories = ref.watch(categoryMapProvider);
+            final text = Theme.of(context).textTheme;
+            final scheme = Theme.of(context).colorScheme;
+            final childTotal = rows.fold(0, (s, e) => s + e.totalMinor);
+
+            return ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(Gaps.lg),
+              children: [
+                Row(
+                  children: [
+                    IconBadge(
+                      icon: AppIcons.resolve(parent.icon),
+                      color: Color(parent.color),
+                      size: 36,
+                      iconSize: 17,
+                    ),
+                    const SizedBox(width: Gaps.md),
+                    Expanded(child: Text(parent.name, style: text.titleMedium)),
+                    AmountText(
+                      Money(minor: childTotal, currency: currency),
+                      formatter: formatter,
+                      style: text.titleMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Gaps.md),
+                for (final e in rows)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        IconBadge(
+                          icon: AppIcons.resolve(
+                            e.categoryId == parent.id
+                                ? parent.icon
+                                : categories[e.categoryId]?.icon ?? 'category',
+                          ),
+                          color: Color(
+                            e.categoryId == parent.id
+                                ? parent.color
+                                : categories[e.categoryId]?.color ?? 0xFF9E9E9E,
+                          ),
+                          size: 30,
+                          iconSize: 14,
+                        ),
+                        const SizedBox(width: Gaps.md),
+                        Expanded(
+                          child: Text(
+                            // Direct spend on the parent shows as "General".
+                            e.categoryId == parent.id
+                                ? 'General'
+                                : categories[e.categoryId]?.name ?? 'Unknown',
+                            style: text.bodyMedium,
+                          ),
+                        ),
+                        if (childTotal > 0)
+                          Text(
+                            '${(e.totalMinor / childTotal * 100).round()}%',
+                            style: text.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        const SizedBox(width: Gaps.sm),
+                        AmountText(
+                          Money(minor: e.totalMinor, currency: currency),
+                          formatter: formatter,
+                          style: text.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }

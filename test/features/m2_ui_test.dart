@@ -284,7 +284,7 @@ void main() {
               ..where((c) => c.kind.equalsValue(CategoryKind.expense))
               ..where((c) => c.deletedAt.isNull()))
             .get();
-    expect(active, hasLength(17)); // 18 seeded − 1 deleted
+    expect(active, hasLength(22)); // 18+5 seeded − 1 deleted
 
     await _teardown(tester);
   });

@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -80,6 +80,12 @@ class AppDatabase extends _$AppDatabase {
             ),
           );
         }
+      }
+      // v4 adds the seeded utility subcategories under Bills & Utilities
+      // (#16). seedBillsSubcategories is idempotent and no-ops when the
+      // user has deleted or renamed the parent.
+      if (from < 4) {
+        await seedBillsSubcategories(this);
       }
     },
     beforeOpen: (details) async {

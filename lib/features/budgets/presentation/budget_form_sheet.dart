@@ -81,9 +81,16 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
+    // Budgets attach to top-level categories only; a parent budget already
+    // counts subcategory spend (#16), so listing children here would create
+    // confusing double-cover.
     final categories =
-        ref.watch(categoriesByKindProvider(CategoryKind.expense)).valueOrNull ??
-        const [];
+        (ref
+                    .watch(categoriesByKindProvider(CategoryKind.expense))
+                    .valueOrNull ??
+                const <Category>[])
+            .where((c) => c.parentId == null)
+            .toList();
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 

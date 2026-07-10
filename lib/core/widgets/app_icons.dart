@@ -33,6 +33,11 @@ abstract final class AppIcons {
     'work': LucideIcons.briefcase,
     'trending_up': LucideIcons.trendingUp,
     'undo': LucideIcons.undo2,
+    // Utility subcategory icons (#16).
+    'bolt': LucideIcons.zap,
+    'flame': LucideIcons.flame,
+    'water_drop': LucideIcons.droplet,
+    'wifi': LucideIcons.wifi,
     // Account icons.
     'wallet': LucideIcons.wallet,
     'credit_card': LucideIcons.creditCard,
@@ -101,6 +106,11 @@ abstract final class AppIcons {
     'storefront',
     'work',
     'trending_up',
+    'bolt',
+    'flame',
+    'water_drop',
+    'wifi',
+    'phone_android',
     'category',
   ];
 }

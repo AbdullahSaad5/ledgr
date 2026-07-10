@@ -798,6 +798,46 @@ Future<int?> _pickAccount(BuildContext context, List<Account> accounts) {
   );
 }
 
+/// Second step of the category picker: choose one of [parent]'s
+/// subcategories, or the parent itself via the leading "All of ..." row.
+Future<int?> _pickSubcategory(
+  BuildContext context, {
+  required Category parent,
+  required List<Category> children,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    useRootNavigator: true,
+    builder: (_) => SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          ListTile(
+            leading: IconBadge(
+              icon: AppIcons.resolve(parent.icon),
+              color: Color(parent.color),
+              iconSize: 19,
+            ),
+            title: Text('All of ${parent.name}'),
+            onTap: () => Navigator.of(context).pop(parent.id),
+          ),
+          const Divider(height: 1),
+          for (final c in children)
+            ListTile(
+              leading: IconBadge(
+                icon: AppIcons.resolve(c.icon),
+                color: Color(c.color),
+                iconSize: 19,
+              ),
+              title: Text(c.name),
+              onTap: () => Navigator.of(context).pop(c.id),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
 Future<int?> _pickCategory(
   BuildContext context,
   WidgetRef ref,
@@ -821,42 +861,68 @@ Future<int?> _pickCategory(
               height: 180,
               child: Center(child: Text('Could not load categories: $e')),
             ),
-            data: (categories) => GridView.count(
-              crossAxisCount: 4,
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(12),
-              children: [
-                for (final c in categories)
-                  InkWell(
-                    onTap: () => Navigator.of(context).pop(c.id),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconBadge(
-                          icon: AppIcons.resolve(c.icon),
-                          color: Color(c.color),
-                          size: 44,
-                          iconSize: 20,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          c.name,
-                          style: Theme.of(context).textTheme.labelSmall,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          // Grid cells are narrow; a capped scale keeps
-                          // long names ("Entertainment") from breaking
-                          // mid-word at large system font sizes.
-                          textScaler: MediaQuery.textScalerOf(
-                            context,
-                          ).clamp(maxScaleFactor: 1.1),
-                        ),
-                      ],
+            data: (categories) {
+              // Grid shows top-level categories only; a parent that has
+              // subcategories opens a second step to pick one (#16).
+              final parents = categories
+                  .where((c) => c.parentId == null)
+                  .toList();
+              final childrenOf = <int, List<Category>>{};
+              for (final c in categories) {
+                final p = c.parentId;
+                if (p != null) childrenOf.putIfAbsent(p, () => []).add(c);
+              }
+              return GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(12),
+                children: [
+                  for (final c in parents)
+                    InkWell(
+                      onTap: () async {
+                        final kids = childrenOf[c.id] ?? const [];
+                        if (kids.isEmpty) {
+                          Navigator.of(context).pop(c.id);
+                          return;
+                        }
+                        final picked = await _pickSubcategory(
+                          context,
+                          parent: c,
+                          children: kids,
+                        );
+                        if (picked != null && context.mounted) {
+                          Navigator.of(context).pop(picked);
+                        }
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconBadge(
+                            icon: AppIcons.resolve(c.icon),
+                            color: Color(c.color),
+                            size: 44,
+                            iconSize: 20,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            c.name,
+                            style: Theme.of(context).textTheme.labelSmall,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            // Grid cells are narrow; a capped scale keeps
+                            // long names ("Entertainment") from breaking
+                            // mid-word at large system font sizes.
+                            textScaler: MediaQuery.textScalerOf(
+                              context,
+                            ).clamp(maxScaleFactor: 1.1),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            ),
+                ],
+              );
+            },
           );
         },
       ),

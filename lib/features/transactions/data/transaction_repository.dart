@@ -66,7 +66,16 @@ class TransactionRepository {
       );
     }
     if (filter.categoryIds.isNotEmpty) {
-      query.where((t) => t.categoryId.isIn(filter.categoryIds));
+      // Selecting a parent also matches its subcategories (#16): the
+      // subquery pulls in every category whose parent is in the filter.
+      final childSub = _db.selectOnly(_db.categories)
+        ..addColumns([_db.categories.id])
+        ..where(_db.categories.parentId.isIn(filter.categoryIds));
+      query.where(
+        (t) =>
+            t.categoryId.isIn(filter.categoryIds) |
+            t.categoryId.isInQuery(childSub),
+      );
     }
     if (filter.types.isNotEmpty) {
       query.where(

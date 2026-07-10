@@ -33,6 +33,16 @@ const _expense = <_SeedCategory>[
   _SeedCategory('Other', 'category', 0xFF9E9E9E),
 ];
 
+/// Utility subcategories seeded under "Bills & Utilities" (#16). One-level
+/// nesting only: children never have children of their own.
+const _billsSubcategories = <_SeedCategory>[
+  _SeedCategory('Electricity', 'bolt', 0xFFF9A825),
+  _SeedCategory('Gas', 'flame', 0xFFE64A19),
+  _SeedCategory('Water', 'water_drop', 0xFF039BE5),
+  _SeedCategory('Internet', 'wifi', 0xFF3949AB),
+  _SeedCategory('Mobile', 'phone_android', 0xFF00897B),
+];
+
 const _income = <_SeedCategory>[
   _SeedCategory('Salary', 'payments', 0xFF2E7D32),
   _SeedCategory('Business', 'storefront', 0xFF1565C0),
@@ -75,4 +85,49 @@ Future<void> seedDefaults(AppDatabase db) async {
       );
     }
   });
+  await seedBillsSubcategories(db);
+}
+
+/// Inserts the utility subcategories under "Bills & Utilities" (#16). Also
+/// called from the v3→v4 migration, so it must be idempotent: skips names
+/// that already exist under the parent, and does nothing when the user has
+/// deleted or renamed the parent.
+Future<void> seedBillsSubcategories(AppDatabase db) async {
+  final bills =
+      await (db.select(db.categories)..where(
+            (c) =>
+                c.name.equals('Bills & Utilities') &
+                c.kind.equalsValue(CategoryKind.expense) &
+                c.deletedAt.isNull(),
+          ))
+          .getSingleOrNull();
+  if (bills == null) return;
+
+  final existing =
+      await (db.select(
+        db.categories,
+      )..where((c) => c.parentId.equals(bills.id))).get();
+  final existingNames = existing.map((c) => c.name).toSet();
+
+  final maxPos = db.categories.position.max();
+  final row = await (db.selectOnly(db.categories)..addColumns([maxPos]))
+      .getSingle();
+  var position = (row.read(maxPos) ?? -1) + 1;
+
+  for (final c in _billsSubcategories) {
+    if (existingNames.contains(c.name)) continue;
+    await db
+        .into(db.categories)
+        .insert(
+          CategoriesCompanion.insert(
+            name: c.name,
+            kind: CategoryKind.expense,
+            icon: c.icon,
+            color: c.color,
+            position: position++,
+            isDefault: const Value(true),
+            parentId: Value(bills.id),
+          ),
+        );
+  }
 }

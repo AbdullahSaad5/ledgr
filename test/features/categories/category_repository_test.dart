@@ -44,6 +44,38 @@ void main() {
     expect(c.color, 0xFF222222);
   });
 
+  test('update can move a category under a parent and back out', () async {
+    final parent = await repo.create(
+      name: 'Bills',
+      kind: CategoryKind.expense,
+      icon: 'receipt_long',
+      color: 0xFF000000,
+    );
+    final id = await repo.create(
+      name: 'Electricity',
+      kind: CategoryKind.expense,
+      icon: 'bolt',
+      color: 0xFF000000,
+    );
+    await repo.update(
+      id,
+      name: 'Electricity',
+      icon: 'bolt',
+      color: 0xFF000000,
+      parentId: parent,
+    );
+    expect((await repo.byId(id))!.parentId, parent);
+
+    await repo.update(
+      id,
+      name: 'Electricity',
+      icon: 'bolt',
+      color: 0xFF000000,
+      parentId: null,
+    );
+    expect((await repo.byId(id))!.parentId, isNull);
+  });
+
   group('mergeAndDelete', () {
     test(
       'reassigns transactions to the target and tombstones the source',
@@ -88,6 +120,36 @@ void main() {
         final kinds = await repo.byKind(CategoryKind.expense);
         expect(kinds.map((c) => c.id), isNot(contains(from)));
         expect(kinds.map((c) => c.id), contains(to));
+      },
+    );
+
+    test(
+      'promotes children to top-level even when merging into a target',
+      () async {
+        final parent = await repo.create(
+          name: 'Bills',
+          kind: CategoryKind.expense,
+          icon: 'receipt_long',
+          color: 0xFF000000,
+        );
+        final child = await repo.create(
+          name: 'Electricity',
+          kind: CategoryKind.expense,
+          icon: 'bolt',
+          color: 0xFF000000,
+          parentId: parent,
+        );
+        final other = await repo.create(
+          name: 'Other bills',
+          kind: CategoryKind.expense,
+          icon: 'category',
+          color: 0xFF000000,
+        );
+        await repo.mergeAndDelete(parent, toId: other);
+        // One-level nesting: a child never follows the merge target (which
+        // could itself be a child) — it becomes top-level instead.
+        final reloaded = await repo.byId(child);
+        expect(reloaded!.parentId, isNull);
       },
     );
 

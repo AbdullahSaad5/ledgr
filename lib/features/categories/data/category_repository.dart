@@ -56,17 +56,21 @@ class CategoryRepository {
         );
   }
 
+  /// [parentId] is always written: pass the current value to keep it, null to
+  /// make the category top-level.
   Future<void> update(
     int id, {
     required String name,
     required String icon,
     required int color,
+    int? parentId,
   }) {
     return (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
       CategoriesCompanion(
         name: Value(name),
         icon: Value(icon),
         color: Value(color),
+        parentId: Value(parentId),
         updatedAt: Value(DateTime.now()),
       ),
     );
@@ -102,8 +106,9 @@ class CategoryRepository {
     return row.read(count) ?? 0;
   }
 
-  /// Delete [fromId] by reassigning its transactions and children to [toId]
-  /// (or detaching children when [toId] is null), then tombstoning it. One
+  /// Delete [fromId] by reassigning its transactions to [toId], promoting its
+  /// children to top-level, then tombstoning it. Children never follow the
+  /// merge target (which could itself be a child — nesting is one level). One
   /// transaction so the move and the delete are atomic.
   Future<void> mergeAndDelete(int fromId, {int? toId}) {
     return _db.transaction(() async {
@@ -118,7 +123,10 @@ class CategoryRepository {
       await (_db.update(
         _db.categories,
       )..where((c) => c.parentId.equals(fromId))).write(
-        CategoriesCompanion(parentId: Value(toId), updatedAt: Value(now)),
+        CategoriesCompanion(
+          parentId: const Value(null),
+          updatedAt: Value(now),
+        ),
       );
       await (_db.update(
         _db.categories,
