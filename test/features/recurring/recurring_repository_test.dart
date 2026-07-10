@@ -107,6 +107,21 @@ void main() {
     expect(items.first.date, DateTime(2026, 7, 1));
   });
 
+  test('watchUpcoming re-emits when a rule is created (realtime)', () async {
+    // Regression: upcoming was a one-shot Future, so the screen needed a
+    // manual reload to see new or posted rules.
+    final emissions = <int>[];
+    final sub = repo.watchUpcoming().listen((items) {
+      emissions.add(items.length);
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await monthlyRule(nextDue: DateTime.now(), autoPost: false);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    await sub.cancel();
+    expect(emissions.first, 0);
+    expect(emissions.last, greaterThan(0));
+  });
+
   test('markPaid posts one and advances the schedule', () async {
     final id = await monthlyRule(
       nextDue: DateTime(2026, 7, 1),

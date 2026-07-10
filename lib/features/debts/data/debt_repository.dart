@@ -17,7 +17,7 @@ class DebtWithRemaining {
       debt.dueDate!.isBefore(DateTime.now());
 }
 
-/// Debts (udhaar) and their repayments (PLAN.md §3.1/§6.8).
+/// Debts (money lent and borrowed) and their repayments (PLAN.md §3.1/§6.8).
 class DebtRepository {
   DebtRepository(this._db, this._tx);
 

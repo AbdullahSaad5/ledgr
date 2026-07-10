@@ -107,8 +107,14 @@ class _NavDestination extends StatelessWidget {
               child: Icon(item.icon, size: 21, color: color),
             ),
             const SizedBox(height: 4),
+            // Nav labels don't follow the system font scale (standard for
+            // bottom bars) so every label stays one line at the same size.
             Text(
               item.label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.visible,
+              textScaler: TextScaler.noScaling,
               style: text.labelSmall?.copyWith(
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                 color: color,

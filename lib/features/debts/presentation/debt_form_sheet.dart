@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/group_card.dart';
+import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -64,6 +67,7 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
+    final scheme = Theme.of(context).colorScheme;
     final lent = widget.direction == DebtDirection.lent;
     return Scaffold(
       appBar: AppBar(
@@ -71,70 +75,121 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
         title: Text(lent ? 'I lent money' : 'I borrowed money'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.xs, Gaps.page, 24),
+        padding: const EdgeInsets.fromLTRB(Gaps.page, 0, Gaps.page, Gaps.xxl),
         children: [
-          TextField(
-            controller: _person,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Person',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          MoneyField(
-            controller: _amount,
-            currency: settings.homeCurrency,
-            label: 'Amount',
-            symbol: settings.currencySymbol,
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<int?>(
-            initialValue: _accountId,
-            decoration: InputDecoration(
-              labelText: lent
-                  ? 'From account (optional)'
-                  : 'Into account (optional)',
-              border: const OutlineInputBorder(),
-            ),
-            items: [
-              const DropdownMenuItem(child: Text('Don’t post a transaction')),
-              for (final a in accounts)
-                DropdownMenuItem(value: a.id, child: Text(a.name)),
-            ],
-            onChanged: (v) => setState(() => _accountId = v),
-          ),
-          const SizedBox(height: 16),
-          Row(
+          GroupCard(
+            title: 'Who & how much',
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(LucideIcons.calendar, size: 18),
-                  label: Text(
-                    _dueDate == null
-                        ? 'Due date (optional)'
-                        : '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}',
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Gaps.lg,
+                  Gaps.lg,
+                  Gaps.lg,
+                  Gaps.sm,
+                ),
+                child: TextField(
+                  controller: _person,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    labelText: 'Person',
+                    prefixIcon: Icon(
+                      LucideIcons.user,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2015),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) setState(() => _dueDate = picked);
-                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Gaps.lg,
+                  Gaps.sm,
+                  Gaps.lg,
+                  Gaps.lg,
+                ),
+                child: MoneyField(
+                  controller: _amount,
+                  currency: settings.homeCurrency,
+                  label: 'Amount',
+                  symbol: settings.currencySymbol,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _note,
-            decoration: const InputDecoration(
-              labelText: 'Note (optional)',
-              border: OutlineInputBorder(),
-            ),
+          GroupCard(
+            title: 'Money movement',
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Gaps.lg,
+                  Gaps.lg,
+                  Gaps.lg,
+                  Gaps.md,
+                ),
+                child: DropdownButtonFormField<int?>(
+                  initialValue: _accountId,
+                  decoration: InputDecoration(
+                    labelText: lent ? 'From account' : 'Into account',
+                    helperText: lent
+                        ? 'Posts the loan as money leaving'
+                        : 'Posts the borrowing as money arriving',
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      child: Text('Don’t post a transaction'),
+                    ),
+                    for (final a in accounts)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (v) => setState(() => _accountId = v),
+                ),
+              ),
+              ListTile(
+                leading: IconBadge(
+                  icon: LucideIcons.calendarClock,
+                  color: scheme.primary,
+                  size: 40,
+                  iconSize: 18,
+                ),
+                title: const Text('Due date'),
+                subtitle: Text(
+                  _dueDate == null
+                      ? 'Optional'
+                      : DateFormat('EEE, d MMM yyyy').format(_dueDate!),
+                  style: TextStyle(
+                    color: _dueDate == null
+                        ? scheme.onSurfaceVariant
+                        : scheme.primary,
+                    fontWeight: _dueDate == null ? null : FontWeight.w600,
+                  ),
+                ),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _dueDate ?? DateTime.now(),
+                    firstDate: DateTime(2015),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) setState(() => _dueDate = picked);
+                },
+              ),
+            ],
+          ),
+          GroupCard(
+            title: 'Note',
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(Gaps.lg),
+                child: TextField(
+                  controller: _note,
+                  decoration: const InputDecoration(
+                    hintText: 'Anything worth remembering (optional)',
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

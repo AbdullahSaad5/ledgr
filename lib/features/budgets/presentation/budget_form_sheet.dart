@@ -202,6 +202,12 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                // Narrow grid cells; cap the scale so long
+                                // names don't truncate hard at large system
+                                // font sizes.
+                                textScaler: MediaQuery.textScalerOf(
+                                  context,
+                                ).clamp(maxScaleFactor: 1.1),
                               ),
                             ],
                           ),

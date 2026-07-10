@@ -26,7 +26,7 @@ const _expense = <_SeedCategory>[
   _SeedCategory('Subscriptions', 'subscriptions', 0xFF00ACC1),
   _SeedCategory('Travel', 'flight', 0xFF039BE5),
   _SeedCategory('Family', 'family_restroom', 0xFF7CB342),
-  _SeedCategory('Charity / Zakat', 'volunteer_activism', 0xFF00A152),
+  _SeedCategory('Charity', 'volunteer_activism', 0xFF00A152),
   _SeedCategory('Fees', 'account_balance', 0xFF757575),
   _SeedCategory('Personal Care', 'spa', 0xFFEC407A),
   _SeedCategory('Gifts', 'card_giftcard', 0xFFF4511E),

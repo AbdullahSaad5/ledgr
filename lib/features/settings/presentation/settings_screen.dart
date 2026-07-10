@@ -240,9 +240,79 @@ class SettingsScreen extends ConsumerWidget {
                   Text('Private, offline-first personal finance tracker.'),
                 ],
               ),
+              ListTile(
+                leading: lead(LucideIcons.userRound),
+                title: const Text('About the developer'),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () => _showDeveloper(context),
+              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showDeveloper(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, Gaps.md, 28, Gaps.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconBadge(
+                icon: LucideIcons.codeXml,
+                color: scheme.primary,
+                size: 56,
+                iconSize: 26,
+              ),
+              const SizedBox(height: Gaps.lg),
+              Text(
+                'Syed Abdullah Saad',
+                style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: Gaps.xs),
+              Text(
+                'Full-stack & AI engineer',
+                style: text.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: Gaps.lg),
+              Text(
+                'Ledgr is built and maintained by one person who wanted a '
+                'finance tracker that never phones home. Your data stays '
+                'on this device — there is nothing to sign into and no '
+                'server to trust.',
+                textAlign: TextAlign.center,
+                style: text.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: Gaps.md),
+              Text(
+                'github.com/AbdullahSaad5',
+                style: text.labelLarge?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: Gaps.xs),
+              Text(
+                'syedabdullahsaad1@gmail.com',
+                style: text.labelLarge?.copyWith(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

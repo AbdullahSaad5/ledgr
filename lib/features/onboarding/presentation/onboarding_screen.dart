@@ -201,7 +201,7 @@ class _WelcomePage extends StatelessWidget {
       const _Promise(
         icon: LucideIcons.chartPie,
         title: 'See where it goes',
-        caption: 'Budgets, reports, and udhaar built in.',
+        caption: 'Budgets, reports, and debt tracking built in.',
       ),
     ];
     return Center(

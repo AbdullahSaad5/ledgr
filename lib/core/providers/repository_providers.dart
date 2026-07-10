@@ -56,8 +56,8 @@ final activeRulesProvider = StreamProvider<List<RecurringRule>>(
   (ref) => ref.watch(recurringRepositoryProvider).watchActive(),
 );
 
-final upcomingProvider = FutureProvider<List<UpcomingItem>>(
-  (ref) => ref.watch(recurringRepositoryProvider).upcoming(DateTime.now()),
+final upcomingProvider = StreamProvider<List<UpcomingItem>>(
+  (ref) => ref.watch(recurringRepositoryProvider).watchUpcoming(),
 );
 
 final debtRepositoryProvider = Provider<DebtRepository>(

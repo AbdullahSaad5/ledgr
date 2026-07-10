@@ -845,6 +845,12 @@ Future<int?> _pickCategory(
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
+                          // Grid cells are narrow; a capped scale keeps
+                          // long names ("Entertainment") from breaking
+                          // mid-word at large system font sizes.
+                          textScaler: MediaQuery.textScalerOf(
+                            context,
+                          ).clamp(maxScaleFactor: 1.1),
                         ),
                       ],
                     ),

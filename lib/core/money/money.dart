@@ -13,7 +13,7 @@ class CurrencyMismatchError extends Error {
   String toString() => 'CurrencyMismatchError: $a vs $b';
 }
 
-/// An immutable amount of money in integer **minor units** (paisa, cents).
+/// An immutable amount of money in integer **minor units** (cents).
 ///
 /// See ADR-0002. No floating point is ever used for money: all arithmetic is
 /// on [minor]. Value equality by (minor, currency). Hand-written (not freezed)
