@@ -145,6 +145,7 @@ class TransactionDetailSheet extends ConsumerWidget {
                           'Note',
                           tx.note!,
                         ),
+                      _TagsRow(transactionId: tx.id, row: _row),
                     ],
                   ),
                 ),
@@ -269,6 +270,32 @@ class _ActionTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Tags on this transaction, shown as a plain comma list. Hidden when the
+/// transaction carries none.
+class _TagsRow extends ConsumerWidget {
+  const _TagsRow({required this.transactionId, required this.row});
+
+  final int transactionId;
+  final Widget Function(BuildContext, IconData, String, String) row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<List<Tag>>(
+      future: ref.read(tagRepositoryProvider).tagsForTransaction(transactionId),
+      builder: (context, snapshot) {
+        final tags = snapshot.data ?? const <Tag>[];
+        if (tags.isEmpty) return const SizedBox.shrink();
+        return row(
+          context,
+          LucideIcons.tag,
+          'Tags',
+          tags.map((t) => t.name).join(', '),
+        );
+      },
     );
   }
 }

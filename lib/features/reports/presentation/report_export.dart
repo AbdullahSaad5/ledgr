@@ -5,17 +5,23 @@ import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/features/reports/data/csv_exporter.dart';
+import 'package:ledgr/features/transactions/domain/transaction_filter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-/// Exports the selected period's transactions to a CSV file and opens the share
-/// sheet.
-Future<void> exportPeriodCsv(WidgetRef ref) async {
+/// Exports transactions to a CSV file and opens the share sheet — either the
+/// selected period or everything (#17 gap fix).
+Future<void> exportPeriodCsv(WidgetRef ref, {bool all = false}) async {
   final period = ref.read(selectedPeriodProvider);
-  final txs = await ref
-      .read(transactionRepositoryProvider)
-      .watchInPeriod(period)
-      .first;
+  final txs = all
+      ? await ref
+            .read(transactionRepositoryProvider)
+            .watchFiltered(const TransactionFilter())
+            .first
+      : await ref
+            .read(transactionRepositoryProvider)
+            .watchInPeriod(period)
+            .first;
   final accounts = ref.read(accountMapProvider);
   final categories = ref.read(categoryMapProvider);
   final formatter = ref.read(moneyFormatterProvider);
@@ -37,7 +43,9 @@ Future<void> exportPeriodCsv(WidgetRef ref) async {
 
   final dir = await getTemporaryDirectory();
   final file = File(
-    '${dir.path}/ledgr_${period.anchorYear}_${period.anchorMonth}.csv',
+    all
+        ? '${dir.path}/ledgr_all_transactions.csv'
+        : '${dir.path}/ledgr_${period.anchorYear}_${period.anchorMonth}.csv',
   );
   await file.writeAsString(csv);
   await Share.shareXFiles([XFile(file.path)], subject: 'Ledgr export');

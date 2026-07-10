@@ -11,6 +11,7 @@ import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
+import 'package:ledgr/core/widgets/menu_sheet.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:ledgr/features/debts/data/debt_repository.dart';
 import 'package:ledgr/features/debts/presentation/debt_form_sheet.dart';
@@ -103,6 +104,33 @@ class _DebtList extends ConsumerWidget {
                   formatter: formatter,
                   currency: currency,
                   onTap: () => _openDetail(context, ref, d),
+                  onLongPress: () => MenuSheet.show(
+                    context,
+                    title: d.debt.person,
+                    items: [
+                      MenuSheetItem(
+                        icon: LucideIcons.pencil,
+                        label: 'Edit',
+                        onTap: () => DebtFormSheet.show(
+                          context,
+                          direction,
+                          debt: d.debt,
+                        ),
+                      ),
+                      MenuSheetItem(
+                        icon: LucideIcons.trash2,
+                        label: 'Delete',
+                        onTap: () async {
+                          await ref
+                              .read(debtRepositoryProvider)
+                              .delete(d.debt.id);
+                          await ref
+                              .read(debtReminderServiceProvider)
+                              .syncAll();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               const SizedBox(height: 80),
             ],
@@ -134,12 +162,14 @@ class _DebtTile extends StatelessWidget {
     required this.formatter,
     required this.currency,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final DebtWithRemaining debt;
   final MoneyFormatter formatter;
   final String currency;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +179,7 @@ class _DebtTile extends StatelessWidget {
         : (debt.paidMinor / debt.debt.principalMinor).clamp(0.0, 1.0);
     return ListTile(
       onTap: onTap,
+      onLongPress: onLongPress,
       leading: IconBadge(
         icon: LucideIcons.userRound,
         color: debt.isOverdue ? scheme.expense : scheme.primary,

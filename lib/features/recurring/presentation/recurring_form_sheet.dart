@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
+import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
@@ -17,13 +18,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Create a recurring rule.
 class RecurringFormSheet extends ConsumerStatefulWidget {
-  const RecurringFormSheet({super.key});
+  const RecurringFormSheet({this.rule, super.key});
 
-  static Future<void> show(BuildContext context) {
+  /// When set, the form edits this rule instead of creating one.
+  final RecurringRule? rule;
+
+  static Future<void> show(BuildContext context, {RecurringRule? rule}) {
     return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => const RecurringFormSheet(),
+        builder: (_) => RecurringFormSheet(rule: rule),
       ),
     );
   }
@@ -42,6 +46,27 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
   DateTime _startDate = DateTime.now();
   bool _autoPost = true;
 
+  bool get _isEditing => widget.rule != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final r = widget.rule;
+    if (r != null) {
+      _title.text = r.title;
+      _amount.text = Money(
+        minor: r.amountMinor,
+        currency: r.currency,
+      ).toDecimal().toString();
+      _type = r.type;
+      _accountId = r.accountId;
+      _categoryId = r.categoryId;
+      _frequency = r.frequency;
+      _startDate = r.nextDue;
+      _autoPost = r.autoPost;
+    }
+  }
+
   @override
   void dispose() {
     _title.dispose();
@@ -58,22 +83,39 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
         _accountId ?? (accounts.isEmpty ? null : accounts.first.id);
     if (title.isEmpty || amount <= 0 || accountId == null) return;
 
-    await ref
-        .read(recurringRepositoryProvider)
-        .create(
-          RecurringRulesCompanion.insert(
-            title: title,
-            type: _type,
-            amountMinor: amount,
-            currency: currency,
-            accountId: accountId,
-            frequency: _frequency,
-            nextDue: _startDate,
-            anchorDay: Value(_startDate.day),
-            categoryId: Value(_categoryId),
-            autoPost: Value(_autoPost),
-          ),
-        );
+    final repo = ref.read(recurringRepositoryProvider);
+    if (_isEditing) {
+      await repo.update(
+        widget.rule!.id,
+        RecurringRulesCompanion(
+          title: Value(title),
+          type: Value(_type),
+          amountMinor: Value(amount),
+          accountId: Value(accountId),
+          frequency: Value(_frequency),
+          nextDue: Value(_startDate),
+          anchorDay: Value(_startDate.day),
+          categoryId: Value(_categoryId),
+          autoPost: Value(_autoPost),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    } else {
+      await repo.create(
+        RecurringRulesCompanion.insert(
+          title: title,
+          type: _type,
+          amountMinor: amount,
+          currency: currency,
+          accountId: accountId,
+          frequency: _frequency,
+          nextDue: _startDate,
+          anchorDay: Value(_startDate.day),
+          categoryId: Value(_categoryId),
+          autoPost: Value(_autoPost),
+        ),
+      );
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -90,7 +132,7 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
     return Scaffold(
       appBar: AppBar(
         leading: const CloseButton(),
-        title: const Text('New recurring'),
+        title: Text(_isEditing ? 'Edit recurring' : 'New recurring'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Gaps.page, 0, Gaps.page, Gaps.xxl),
@@ -269,7 +311,10 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
         ),
         child: SizedBox(
           height: 52,
-          child: FilledButton(onPressed: _save, child: const Text('Create')),
+          child: FilledButton(
+            onPressed: _save,
+            child: Text(_isEditing ? 'Save' : 'Create'),
+          ),
         ),
       ),
     );

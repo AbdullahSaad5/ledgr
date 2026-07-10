@@ -5,6 +5,7 @@ import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/currency_picker_sheet.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/ledgr_header.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
@@ -324,6 +325,28 @@ class _CurrencyPage extends StatelessWidget {
                   onTap: () => onSelect(c.$1, c.$2),
                 ),
               ],
+              Divider(height: 1, indent: 68, color: scheme.outlineVariant),
+              // The full searchable catalog for everyone else (#17 gap fix:
+              // onboarding used to offer only these six).
+              ListTile(
+                leading: const SizedBox(
+                  width: 44,
+                  child: Icon(LucideIcons.globe, size: 20),
+                ),
+                title: Text(
+                  _currencies.any((c) => c.$1 == selected)
+                      ? 'More currencies…'
+                      : '$selected (selected)',
+                ),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () async {
+                  final picked = await CurrencyPickerSheet.show(
+                    context,
+                    current: selected,
+                  );
+                  if (picked != null) onSelect(picked.$1, picked.$2);
+                },
+              ),
             ],
           ),
         ),

@@ -70,6 +70,26 @@ void main() {
     ));
   });
 
+  test('update edits person, due date, and note', () async {
+    final id = await debts.create(
+      person: 'Alii',
+      direction: DebtDirection.lent,
+      principalMinor: 5000,
+      currency: 'PKR',
+    );
+    final due = DateTime(2026, 8, 1);
+    await debts.update(id, person: 'Ali', dueDate: due, note: 'chai money');
+
+    final all = await debts.watchByDirection(DebtDirection.lent).first;
+    final debt = all.single.debt;
+    expect(debt.person, 'Ali');
+    expect(
+      (debt.dueDate!.year, debt.dueDate!.month, debt.dueDate!.day),
+      (2026, 8, 1),
+    );
+    expect(debt.note, 'chai money');
+  });
+
   test('cancels reminders for settled debts and debts without dates', () async {
     final withDate = await debts.create(
       person: 'Bilal',

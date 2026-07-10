@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
@@ -13,17 +14,23 @@ import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// Create a debt in the given [direction].
+/// Create a debt in the given [direction], or edit an existing one's
+/// person / due date / note (money movement is locked after creation).
 class DebtFormSheet extends ConsumerStatefulWidget {
-  const DebtFormSheet({required this.direction, super.key});
+  const DebtFormSheet({required this.direction, this.debt, super.key});
 
   final DebtDirection direction;
+  final Debt? debt;
 
-  static Future<void> show(BuildContext context, DebtDirection direction) {
+  static Future<void> show(
+    BuildContext context,
+    DebtDirection direction, {
+    Debt? debt,
+  }) {
     return Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute<void>(
         fullscreenDialog: true,
-        builder: (_) => DebtFormSheet(direction: direction),
+        builder: (_) => DebtFormSheet(direction: direction, debt: debt),
       ),
     );
   }
@@ -39,6 +46,19 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
   int? _accountId;
   DateTime? _dueDate;
 
+  bool get _isEditing => widget.debt != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.debt;
+    if (d != null) {
+      _person.text = d.person;
+      _dueDate = d.dueDate;
+      _note.text = d.note ?? '';
+    }
+  }
+
   @override
   void dispose() {
     _person.dispose();
@@ -49,20 +69,29 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
 
   Future<void> _save() async {
     final person = _person.text.trim();
-    final currency = ref.read(appSettingsProvider).homeCurrency;
-    final principal = MoneyField.parse(_amount.text, currency).minor;
-    if (person.isEmpty || principal <= 0) return;
-    await ref
-        .read(debtRepositoryProvider)
-        .create(
-          person: person,
-          direction: widget.direction,
-          principalMinor: principal,
-          currency: currency,
-          accountId: _accountId,
-          dueDate: _dueDate,
-          note: _note.text.trim().isEmpty ? null : _note.text.trim(),
-        );
+    if (person.isEmpty) return;
+    final repo = ref.read(debtRepositoryProvider);
+    if (_isEditing) {
+      await repo.update(
+        widget.debt!.id,
+        person: person,
+        dueDate: _dueDate,
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      );
+    } else {
+      final currency = ref.read(appSettingsProvider).homeCurrency;
+      final principal = MoneyField.parse(_amount.text, currency).minor;
+      if (principal <= 0) return;
+      await repo.create(
+        person: person,
+        direction: widget.direction,
+        principalMinor: principal,
+        currency: currency,
+        accountId: _accountId,
+        dueDate: _dueDate,
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      );
+    }
     await ref.read(debtReminderServiceProvider).syncAll();
     if (mounted) Navigator.of(context).pop();
   }
@@ -76,7 +105,11 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
     return Scaffold(
       appBar: AppBar(
         leading: const CloseButton(),
-        title: Text(lent ? 'I lent money' : 'I borrowed money'),
+        title: Text(
+          _isEditing
+              ? 'Edit debt'
+              : (lent ? 'I lent money' : 'I borrowed money'),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Gaps.page, 0, Gaps.page, Gaps.xxl),
@@ -100,25 +133,37 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
                   textCapitalization: TextCapitalization.words,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  Gaps.lg,
-                  Gaps.sm,
-                  Gaps.lg,
-                  Gaps.lg,
-                ),
-                child: MoneyField(
-                  controller: _amount,
-                  currency: settings.homeCurrency,
-                  label: 'Amount',
-                  symbol: settings.currencySymbol,
-                ),
-              ),
+              if (!_isEditing)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Gaps.lg,
+                    Gaps.sm,
+                    Gaps.lg,
+                    Gaps.lg,
+                  ),
+                  child: MoneyField(
+                    controller: _amount,
+                    currency: settings.homeCurrency,
+                    label: 'Amount',
+                    symbol: settings.currencySymbol,
+                  ),
+                )
+              else
+                const SizedBox(height: Gaps.sm),
             ],
           ),
           GroupCard(
             title: 'Money movement',
             children: [
+              if (_isEditing)
+                const Padding(
+                  padding: EdgeInsets.all(Gaps.lg),
+                  child: Text(
+                    'Amount and account are locked once a debt exists — '
+                    'record payments instead.',
+                  ),
+                )
+              else
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   Gaps.lg,

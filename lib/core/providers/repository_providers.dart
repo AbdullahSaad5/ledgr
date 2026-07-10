@@ -94,7 +94,8 @@ final debtsByDirectionProvider =
     );
 
 final notificationServiceProvider = Provider<NotificationService>(
-  (ref) => NotificationService(),
+  (ref) => NotificationService()
+    ..isEnabled = () => ref.read(appSettingsProvider).notificationsEnabled,
 );
 
 final debtReminderServiceProvider = Provider<DebtReminderService>(

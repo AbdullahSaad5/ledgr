@@ -51,6 +51,7 @@ class RecurringScreen extends ConsumerWidget {
             children: [
               for (final r in rules)
                 ListTile(
+                  onTap: () => RecurringFormSheet.show(context, rule: r),
                   leading: IconBadge(
                     icon: r.autoPost ? LucideIcons.refreshCw : LucideIcons.bell,
                     color: Theme.of(context).colorScheme.primary,

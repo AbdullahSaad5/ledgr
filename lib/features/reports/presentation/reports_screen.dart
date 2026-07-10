@@ -15,6 +15,7 @@ import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/insight_tile.dart';
 import 'package:ledgr/core/widgets/ledgr_header.dart';
+import 'package:ledgr/core/widgets/menu_sheet.dart';
 import 'package:ledgr/core/widgets/period_switcher.dart';
 import 'package:ledgr/core/widgets/section_header.dart';
 import 'package:ledgr/core/widgets/soft_icon_button.dart';
@@ -46,7 +47,22 @@ class ReportsScreen extends ConsumerWidget {
                   SoftIconButton(
                     icon: LucideIcons.share,
                     tooltip: 'Export CSV',
-                    onPressed: () => exportPeriodCsv(ref),
+                    onPressed: () => MenuSheet.show(
+                      context,
+                      title: 'Export CSV',
+                      items: [
+                        MenuSheetItem(
+                          icon: LucideIcons.calendar,
+                          label: 'This period',
+                          onTap: () => exportPeriodCsv(ref),
+                        ),
+                        MenuSheetItem(
+                          icon: LucideIcons.calendarRange,
+                          label: 'All transactions',
+                          onTap: () => exportPeriodCsv(ref, all: true),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

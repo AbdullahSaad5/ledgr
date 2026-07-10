@@ -11,6 +11,10 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   bool _ready = false;
 
+  /// Injected by the provider so the settings "Budget alerts" toggle gates
+  /// every notification (it previously gated nothing — #17 gap fix).
+  bool Function() isEnabled = () => true;
+
   Future<void> init() async {
     try {
       tz_data.initializeTimeZones();
@@ -32,7 +36,7 @@ class NotificationService {
     String channelId = 'ledgr_alerts',
     String channelName = 'Alerts',
   }) async {
-    if (!_ready) return;
+    if (!_ready || !isEnabled()) return;
     try {
       final details = NotificationDetails(
         android: AndroidNotificationDetails(
@@ -59,7 +63,7 @@ class NotificationService {
     String channelId = 'ledgr_reminders',
     String channelName = 'Reminders',
   }) async {
-    if (!_ready || when.isBefore(DateTime.now())) return;
+    if (!_ready || !isEnabled() || when.isBefore(DateTime.now())) return;
     try {
       final details = NotificationDetails(
         android: AndroidNotificationDetails(

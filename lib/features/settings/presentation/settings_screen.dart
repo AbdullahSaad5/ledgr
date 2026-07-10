@@ -8,6 +8,7 @@ import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/providers/database_provider.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/currency_picker_sheet.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
@@ -18,47 +19,6 @@ import 'package:ledgr/features/settings/presentation/pin_setup_sheet.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-
-const _currencies = <(String, String, String)>[
-  ('PKR', 'Rs ', 'Pakistani Rupee'),
-  ('USD', r'$', 'US Dollar'),
-  ('EUR', '€', 'Euro'),
-  ('GBP', '£', 'British Pound'),
-  ('INR', '₹', 'Indian Rupee'),
-  ('AED', 'AED ', 'UAE Dirham'),
-  ('SAR', 'SR ', 'Saudi Riyal'),
-  ('QAR', 'QR ', 'Qatari Riyal'),
-  ('KWD', 'KD ', 'Kuwaiti Dinar'),
-  ('BHD', 'BD ', 'Bahraini Dinar'),
-  ('OMR', 'OMR ', 'Omani Rial'),
-  ('TRY', '₺', 'Turkish Lira'),
-  ('CAD', r'CA$', 'Canadian Dollar'),
-  ('AUD', r'A$', 'Australian Dollar'),
-  ('JPY', '¥', 'Japanese Yen'),
-  ('CNY', 'CN¥', 'Chinese Yuan'),
-  ('MYR', 'RM ', 'Malaysian Ringgit'),
-  ('IDR', 'Rp ', 'Indonesian Rupiah'),
-  ('BDT', '৳', 'Bangladeshi Taka'),
-  ('LKR', 'Rs ', 'Sri Lankan Rupee'),
-  ('NPR', 'Rs ', 'Nepalese Rupee'),
-  ('AFN', 'Af ', 'Afghan Afghani'),
-  ('ZAR', 'R ', 'South African Rand'),
-  ('NGN', '₦', 'Nigerian Naira'),
-  ('EGP', 'E£', 'Egyptian Pound'),
-  ('CHF', 'CHF ', 'Swiss Franc'),
-  ('SEK', 'kr ', 'Swedish Krona'),
-  ('NOK', 'kr ', 'Norwegian Krone'),
-  ('DKK', 'kr ', 'Danish Krone'),
-  ('SGD', r'S$', 'Singapore Dollar'),
-  ('HKD', r'HK$', 'Hong Kong Dollar'),
-  ('KRW', '₩', 'South Korean Won'),
-  ('THB', '฿', 'Thai Baht'),
-  ('PHP', '₱', 'Philippine Peso'),
-  ('VND', '₫', 'Vietnamese Dong'),
-  ('BRL', r'R$', 'Brazilian Real'),
-  ('MXN', r'MX$', 'Mexican Peso'),
-  ('RUB', '₽', 'Russian Ruble'),
-];
 
 const _lockTimeouts = <(int, String)>[
   (0, 'Immediately'),
@@ -381,21 +341,7 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _pickCurrency(BuildContext context, WidgetRef ref) async {
     final controller = ref.read(settingsControllerProvider.notifier);
     final current = ref.read(appSettingsProvider).homeCurrency;
-    final picked = await showModalBottomSheet<(String, String, String)>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        // Keep the list above the keyboard while searching.
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-        ),
-        child: SizedBox(
-          height: MediaQuery.sizeOf(sheetContext).height * 0.72,
-          child: _CurrencySheet(current: current),
-        ),
-      ),
-    );
+    final picked = await CurrencyPickerSheet.show(context, current: current);
     if (picked != null) {
       await controller.setCurrency(picked.$1, picked.$2);
     }
@@ -480,6 +426,75 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
+    // File first (the natural path since exports are files); paste stays as
+    // the fallback for JSON coming from anywhere else.
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.fileJson, size: 20),
+              title: const Text('Pick a backup file'),
+              onTap: () => Navigator.of(sheetContext).pop('file'),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.clipboardPaste, size: 20),
+              title: const Text('Paste JSON'),
+              onTap: () => Navigator.of(sheetContext).pop('paste'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    if (source == 'file') {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+      final path = picked?.files.single.path;
+      if (path == null) return;
+      if (!context.mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Restore backup?'),
+          content: const Text(
+            'Importing replaces everything currently in the app.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Restore'),
+            ),
+          ],
+        ),
+      );
+      if (!(confirmed ?? false)) return;
+      try {
+        await ref
+            .read(backupServiceProvider)
+            .import(await File(path).readAsString());
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Backup restored')),
+        );
+      } on Exception catch (e) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Could not import backup: $e')),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
     final text = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
@@ -566,110 +581,5 @@ class SettingsScreen extends ConsumerWidget {
       });
       messenger.showSnackBar(const SnackBar(content: Text('Data cleared')));
     }
-  }
-}
-
-/// Searchable currency list: filters by code, name, or symbol as you type.
-class _CurrencySheet extends StatefulWidget {
-  const _CurrencySheet({required this.current});
-
-  final String current;
-
-  @override
-  State<_CurrencySheet> createState() => _CurrencySheetState();
-}
-
-class _CurrencySheetState extends State<_CurrencySheet> {
-  final _query = TextEditingController();
-
-  @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final q = _query.text.trim().toLowerCase();
-    final matches = _currencies
-        .where(
-          (c) =>
-              q.isEmpty ||
-              c.$1.toLowerCase().contains(q) ||
-              c.$3.toLowerCase().contains(q) ||
-              c.$2.trim().toLowerCase() == q,
-        )
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(Gaps.xl, 0, Gaps.xl, Gaps.sm),
-          child: Text('Currency', style: text.titleMedium),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Gaps.xl),
-          child: TextField(
-            controller: _query,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'Search by code or name',
-              prefixIcon: const Icon(LucideIcons.search, size: 18),
-              suffixIcon: q.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(LucideIcons.x, size: 16),
-                      onPressed: () {
-                        _query.clear();
-                        setState(() {});
-                      },
-                    ),
-            ),
-          ),
-        ),
-        const SizedBox(height: Gaps.sm),
-        Expanded(
-          child: matches.isEmpty
-              ? Center(
-                  child: Text(
-                    'No currency matches "$q"',
-                    style: text.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.only(bottom: Gaps.md),
-                  children: [
-                    for (final c in matches)
-                      ListTile(
-                        leading: SizedBox(
-                          width: 44,
-                          child: Text(
-                            c.$2.trim(),
-                            textAlign: TextAlign.center,
-                            style: text.titleSmall?.copyWith(
-                              color: scheme.primary,
-                            ),
-                          ),
-                        ),
-                        title: Text(c.$3),
-                        subtitle: Text(c.$1),
-                        trailing: c.$1 == widget.current
-                            ? Icon(
-                                LucideIcons.circleCheck,
-                                color: scheme.primary,
-                              )
-                            : null,
-                        onTap: () => Navigator.of(context).pop(c),
-                      ),
-                  ],
-                ),
-        ),
-      ],
-    );
   }
 }

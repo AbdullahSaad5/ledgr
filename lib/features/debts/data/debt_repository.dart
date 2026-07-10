@@ -143,6 +143,24 @@ class DebtRepository {
     });
   }
 
+  /// Edits the descriptive fields; principal and direction stay locked once
+  /// payments may exist against them.
+  Future<void> update(
+    int id, {
+    required String person,
+    DateTime? dueDate,
+    String? note,
+  }) {
+    return (_db.update(_db.debts)..where((d) => d.id.equals(id))).write(
+      DebtsCompanion(
+        person: Value(person),
+        dueDate: Value(dueDate),
+        note: Value(note),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
   Future<void> settle(int id) {
     return (_db.update(_db.debts)..where((d) => d.id.equals(id))).write(
       DebtsCompanion(

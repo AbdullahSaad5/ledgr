@@ -6,11 +6,13 @@ import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/keypad_controller.dart';
+import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_x.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:ledgr/features/transactions/domain/transaction_draft.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/calc_keypad.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -41,6 +43,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   /// Receipt photos picked before the transaction exists; attached on save.
   final List<String> _stagedReceipts = [];
+
+  /// Optional transfer fee, charged to the source account.
+  int _feeMinor = 0;
   bool _loaded = false;
 
   bool get _isEditing => widget.transactionId != null;
@@ -159,6 +164,21 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     setState(() => _stagedReceipts.add(picked.path));
   }
 
+  Future<void> _editFee() async {
+    final settings = ref.read(appSettingsProvider);
+    final result = await showModalBottomSheet<int>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      builder: (_) => _FeeSheet(
+        currency: settings.homeCurrency,
+        symbol: settings.currencySymbol,
+        initialMinor: _feeMinor,
+      ),
+    );
+    if (result != null) setState(() => _feeMinor = result);
+  }
+
   void _hydrate(Transaction tx) {
     if (_loaded) return;
     _loaded = true;
@@ -169,6 +189,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     _date = tx.date;
     _payee.text = tx.payee ?? '';
     _note.text = tx.note ?? '';
+    _feeMinor = tx.feeMinor ?? 0;
     _keypad.expression = KeypadController.fromMoney(tx.amount).expression;
   }
 
@@ -196,6 +217,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       categoryId: _type == TxType.transfer ? null : _categoryId,
       payee: _payee.text.trim().isEmpty ? null : _payee.text.trim(),
       note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      feeMinor: _type == TxType.transfer && _feeMinor > 0 ? _feeMinor : null,
       date: _date,
     );
 
@@ -322,6 +344,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             active: _tagIds.isNotEmpty,
                             onTap: _editTags,
                           ),
+                          if (_type == TxType.transfer) ...[
+                            const SizedBox(width: 8),
+                            _MetaPill(
+                              icon: LucideIcons.receipt,
+                              label: _feeMinor > 0 ? 'Fee added' : 'Fee',
+                              active: _feeMinor > 0,
+                              onTap: _editFee,
+                            ),
+                          ],
                           const SizedBox(width: 8),
                           _MetaPill(
                             icon: LucideIcons.imagePlus,
@@ -992,4 +1023,75 @@ Future<int?> _pickCategory(
       ),
     ),
   );
+}
+
+/// Transfer-fee entry. Owns its controller so disposal happens with the
+/// sheet, not mid-dismiss animation.
+class _FeeSheet extends StatefulWidget {
+  const _FeeSheet({
+    required this.currency,
+    required this.symbol,
+    required this.initialMinor,
+  });
+
+  final String currency;
+  final String symbol;
+  final int initialMinor;
+
+  @override
+  State<_FeeSheet> createState() => _FeeSheetState();
+}
+
+class _FeeSheetState extends State<_FeeSheet> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialMinor > 0
+        ? Money(
+            minor: widget.initialMinor,
+            currency: widget.currency,
+          ).toDecimal().toString()
+        : '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        Gaps.page,
+        Gaps.lg,
+        Gaps.page,
+        MediaQuery.viewInsetsOf(context).bottom + Gaps.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Transfer fee', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: Gaps.md),
+          MoneyField(
+            controller: _controller,
+            currency: widget.currency,
+            label: 'Fee (charged to the source account)',
+            symbol: widget.symbol,
+          ),
+          const SizedBox(height: Gaps.lg),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: () => Navigator.of(context).pop(
+                MoneyField.parse(_controller.text, widget.currency).minor,
+              ),
+              child: const Text('Save fee'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
