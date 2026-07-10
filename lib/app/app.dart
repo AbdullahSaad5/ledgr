@@ -5,9 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:home_widget/home_widget.dart';
+import 'package:intl/intl.dart';
 import 'package:ledgr/app/router.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/db/database.dart';
+import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/home_widget/home_widget_sync.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -37,22 +39,82 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initQuickActions();
-    _initHomeWidget();
   }
 
-  /// Home-screen widget: the + button deep-links into the keypad.
-  void _initHomeWidget() {
+  /// Builds the full widget snapshot (net worth, month totals, overall
+  /// budget, recent lines, today's spend) and pushes it to both widgets.
+  Future<void> _syncHomeWidgets() async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
-      HomeWidget.initiallyLaunchedFromHomeWidget().then(_onWidgetUri);
-      HomeWidget.widgetClicked.listen(_onWidgetUri);
-    } on Exception catch (_) {
-      // Widget plumbing is best-effort; never block startup.
-    }
-  }
+      final formatter = ref.read(moneyFormatterProvider);
+      final currency = ref.read(appSettingsProvider).homeCurrency;
+      String money(int minor) =>
+          formatter.format(Money(minor: minor, currency: currency));
 
-  void _onWidgetUri(Uri? uri) {
-    if (uri != null && uri.host == 'add') _router.push('/tx/new');
+      final now = DateTime.now();
+      final period = ref.read(periodResolverProvider).periodContaining(now);
+      final reports = ref.read(reportsRepositoryProvider);
+
+      final accounts = await ref
+          .read(accountRepositoryProvider)
+          .watchActiveWithBalances()
+          .first;
+      final netWorth = accounts
+          .where((a) => a.account.includeInNetWorth)
+          .fold(0, (s, a) => s + a.balanceMinor);
+
+      final totals = await reports.monthTotals(period);
+
+      final budgets = await ref
+          .read(budgetRepositoryProvider)
+          .watchProgress(period)
+          .first;
+      final overallMatches = budgets.where((b) => b.isOverall);
+      final budget = overallMatches.isNotEmpty
+          ? overallMatches.first
+          : (budgets.isNotEmpty ? budgets.first : null);
+
+      final txs = await ref
+          .read(transactionRepositoryProvider)
+          .watchInPeriod(period)
+          .first;
+      final categories = ref.read(categoryMapProvider);
+      String txTitle(Transaction t) =>
+          t.payee ?? categories[t.categoryId]?.name ?? t.type.name;
+      final today = txs.where(
+        (t) =>
+            t.type == TxType.expense &&
+            t.date.year == now.year &&
+            t.date.month == now.month &&
+            t.date.day == now.day,
+      );
+      final todaySpent = today.fold(0, (s, t) => s + t.amountMinor);
+
+      final start = period.start;
+      final endDay = period.end.subtract(const Duration(days: 1));
+
+      await HomeWidgetSync.push(
+        netWorth: money(netWorth),
+        periodLabel:
+            '${DateFormat('d MMM').format(start)} – '
+            '${DateFormat('d MMM').format(endDay)}',
+        spent: money(totals.expenseMinor),
+        received: money(totals.incomeMinor),
+        todaySpent: money(todaySpent),
+        budgetLabel: budget == null
+            ? null
+            : '${budget.isOverall ? 'Overall budget' : 'Budget'} · '
+                  '${money(budget.spentMinor)} of '
+                  '${money(budget.effectiveLimitMinor)}',
+        budgetPct: budget == null ? -1 : (budget.fraction * 100).round(),
+        tx1Title: txs.isNotEmpty ? txTitle(txs[0]) : '',
+        tx1Amount: txs.isNotEmpty ? money(txs[0].amountMinor) : '',
+        tx2Title: txs.length > 1 ? txTitle(txs[1]) : '',
+        tx2Amount: txs.length > 1 ? money(txs[1].amountMinor) : '',
+      );
+    } on Object {
+      // Snapshot building is best-effort; widgets just stay stale.
+    }
   }
 
   /// Launcher long-press shortcut: jump straight into the keypad.
@@ -98,18 +160,10 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
-    // Keep the home-screen widget's number current with every balance change.
+    // Keep the home-screen widgets current with every balance change (the
+    // accounts stream fires on any money-affecting write).
     ref.listen(activeAccountsProvider, (_, next) {
-      final accounts = next.valueOrNull;
-      if (accounts == null) return;
-      final total = accounts
-          .where((a) => a.account.includeInNetWorth)
-          .fold(0, (s, a) => s + a.balanceMinor);
-      final formatter = ref.read(moneyFormatterProvider);
-      final currency = ref.read(appSettingsProvider).homeCurrency;
-      HomeWidgetSync.push(
-        netWorth: formatter.format(Money(minor: total, currency: currency)),
-      );
+      if (next.valueOrNull != null) _syncHomeWidgets();
     });
     final seed = Color(settings.seedColor);
     final locked = ref.watch(lockControllerProvider) && settings.lockEnabled;
