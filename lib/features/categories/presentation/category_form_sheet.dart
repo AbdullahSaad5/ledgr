@@ -8,6 +8,7 @@ import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/color_swatches.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/icon_browse_sheet.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Create or edit a category, as a full screen.
@@ -145,7 +146,12 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
                   mainAxisSpacing: Gaps.sm,
                   crossAxisSpacing: Gaps.sm,
                   children: [
-                    for (final name in AppIcons.categoryPickerNames)
+                    // A picked browse-all icon joins the curated grid so the
+                    // selection is never invisible.
+                    for (final name in {
+                      _icon,
+                      ...AppIcons.categoryPickerNames,
+                    })
                       InkWell(
                         borderRadius: BorderRadius.circular(14),
                         onTap: () => setState(() => _icon = name),
@@ -163,6 +169,22 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
                       ),
                   ],
                 ),
+              ),
+              ListTile(
+                leading: Icon(LucideIcons.layoutGrid, size: 18, color: accent),
+                title: Text(
+                  'Browse all icons',
+                  style: TextStyle(color: accent, fontWeight: FontWeight.w700),
+                ),
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () async {
+                  final picked = await IconBrowseSheet.show(
+                    context,
+                    selected: _icon,
+                    accent: accent,
+                  );
+                  if (picked != null) setState(() => _icon = picked);
+                },
               ),
             ],
           ),

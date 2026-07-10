@@ -66,15 +66,33 @@ class _CategoryList extends ConsumerWidget {
           return ListView(
             children: [
               for (final parent in parents) ...[
-                _categoryTile(context, ref, parent, categories, childrenOf),
-                for (final child in childrenOf[parent.id] ?? const <Category>[])
-                  _categoryTile(
-                    context,
-                    ref,
-                    child,
-                    categories,
-                    childrenOf,
-                    indented: true,
+                _categoryTile(context, ref, parent, categories),
+                // Children hang off a parent-colored rail so the nesting
+                // reads as structure, not stray indentation.
+                if ((childrenOf[parent.id] ?? const <Category>[]).isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 35,
+                      bottom: 6,
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: BorderDirectional(
+                          start: BorderSide(
+                            color: Color(
+                              parent.color,
+                            ).withValues(alpha: 0.35),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          for (final child in childrenOf[parent.id]!)
+                            _childTile(context, ref, child, categories),
+                        ],
+                      ),
+                    ),
                   ),
               ],
               const SizedBox(height: 80),
@@ -90,19 +108,12 @@ class _CategoryList extends ConsumerWidget {
     WidgetRef ref,
     Category c,
     List<Category> categories,
-    Map<int, List<Category>> childrenOf, {
-    bool indented = false,
-  }) {
-    final isParent = !indented;
+  ) {
     return ListTile(
-      contentPadding: indented
-          ? const EdgeInsetsDirectional.only(start: 40, end: 16)
-          : null,
       leading: IconBadge(
         icon: AppIcons.resolve(c.icon),
         color: Color(c.color),
-        size: indented ? 34 : 40,
-        iconSize: indented ? 16 : 19,
+        iconSize: 19,
       ),
       title: Text(c.name),
       trailing: IconButton(
@@ -119,16 +130,69 @@ class _CategoryList extends ConsumerWidget {
                   CategoryFormSheet.show(context, kind: kind, category: c),
             ),
             // One-level nesting: only top-level categories take children.
-            if (isParent)
-              MenuSheetItem(
-                icon: LucideIcons.plus,
-                label: 'Add subcategory',
-                onTap: () => CategoryFormSheet.show(
-                  context,
-                  kind: kind,
-                  initialParentId: c.id,
-                ),
+            MenuSheetItem(
+              icon: LucideIcons.plus,
+              label: 'Add subcategory',
+              onTap: () => CategoryFormSheet.show(
+                context,
+                kind: kind,
+                initialParentId: c.id,
               ),
+            ),
+            MenuSheetItem(
+              icon: LucideIcons.trash2,
+              label: 'Delete',
+              onTap: () => _confirmDelete(context, ref, c, categories),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// A subcategory row: elbow glyph + smaller badge, hanging off the
+  /// parent-colored rail drawn by the list above.
+  Widget _childTile(
+    BuildContext context,
+    WidgetRef ref,
+    Category c,
+    List<Category> categories,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsetsDirectional.only(start: 14, end: 16),
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            LucideIcons.cornerDownRight,
+            size: 15,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          IconBadge(
+            icon: AppIcons.resolve(c.icon),
+            color: Color(c.color),
+            size: 32,
+            iconSize: 15,
+          ),
+        ],
+      ),
+      title: Text(c.name),
+      trailing: IconButton(
+        icon: const Icon(LucideIcons.moreVertical, size: 18),
+        visualDensity: VisualDensity.compact,
+        onPressed: () => MenuSheet.show(
+          context,
+          title: c.name,
+          items: [
+            MenuSheetItem(
+              icon: LucideIcons.pencil,
+              label: 'Edit',
+              onTap: () =>
+                  CategoryFormSheet.show(context, kind: kind, category: c),
+            ),
             MenuSheetItem(
               icon: LucideIcons.trash2,
               label: 'Delete',

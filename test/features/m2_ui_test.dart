@@ -166,7 +166,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Filters'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilterChip, 'Expense'));
+    await tester.tap(find.text('Expense').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Apply filters'));
     await tester.pumpAndSettle();

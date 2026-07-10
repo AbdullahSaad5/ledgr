@@ -10,6 +10,7 @@ import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/color_swatches.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 
 /// Create or edit an account, as a full screen with a live preview card.
@@ -189,18 +190,21 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
                     const SizedBox(height: Gaps.md),
-                    DropdownButtonFormField<AccountType>(
-                      initialValue: _type,
-                      decoration: const InputDecoration(labelText: 'Type'),
-                      items: [
+                    LedgrSelect<AccountType>(
+                      label: 'Type',
+                      value: _type,
+                      options: [
                         for (final t in AccountType.values)
-                          DropdownMenuItem(
+                          LedgrSelectOption(
                             value: t,
-                            child: Text(_typeLabel(t)),
+                            label: _typeLabel(t),
+                            icon: AppIcons.resolve(
+                              AppIcons.defaultForAccount(t),
+                            ),
                           ),
                       ],
                       onChanged: (t) => setState(() {
-                        _type = t!;
+                        _type = t;
                         _icon = AppIcons.defaultForAccount(t);
                       }),
                     ),

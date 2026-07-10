@@ -9,51 +9,52 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
 import 'package:ledgr/features/settings/presentation/pin_setup_sheet.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-const _currencies = <(String, String)>[
-  ('PKR', 'Rs '),
-  ('USD', r'$'),
-  ('EUR', '€'),
-  ('GBP', '£'),
-  ('INR', '₹'),
-  ('AED', 'AED '),
-  ('SAR', 'SR '),
-  ('QAR', 'QR '),
-  ('KWD', 'KD '),
-  ('BHD', 'BD '),
-  ('OMR', 'OMR '),
-  ('TRY', '₺'),
-  ('CAD', r'CA$'),
-  ('AUD', r'A$'),
-  ('JPY', '¥'),
-  ('CNY', 'CN¥'),
-  ('MYR', 'RM '),
-  ('IDR', 'Rp '),
-  ('BDT', '৳'),
-  ('LKR', 'Rs '),
-  ('NPR', 'Rs '),
-  ('AFN', 'Af '),
-  ('ZAR', 'R '),
-  ('NGN', '₦'),
-  ('EGP', 'E£'),
-  ('CHF', 'CHF '),
-  ('SEK', 'kr '),
-  ('NOK', 'kr '),
-  ('DKK', 'kr '),
-  ('SGD', r'S$'),
-  ('HKD', r'HK$'),
-  ('KRW', '₩'),
-  ('THB', '฿'),
-  ('PHP', '₱'),
-  ('VND', '₫'),
-  ('BRL', r'R$'),
-  ('MXN', r'MX$'),
-  ('RUB', '₽'),
+const _currencies = <(String, String, String)>[
+  ('PKR', 'Rs ', 'Pakistani Rupee'),
+  ('USD', r'$', 'US Dollar'),
+  ('EUR', '€', 'Euro'),
+  ('GBP', '£', 'British Pound'),
+  ('INR', '₹', 'Indian Rupee'),
+  ('AED', 'AED ', 'UAE Dirham'),
+  ('SAR', 'SR ', 'Saudi Riyal'),
+  ('QAR', 'QR ', 'Qatari Riyal'),
+  ('KWD', 'KD ', 'Kuwaiti Dinar'),
+  ('BHD', 'BD ', 'Bahraini Dinar'),
+  ('OMR', 'OMR ', 'Omani Rial'),
+  ('TRY', '₺', 'Turkish Lira'),
+  ('CAD', r'CA$', 'Canadian Dollar'),
+  ('AUD', r'A$', 'Australian Dollar'),
+  ('JPY', '¥', 'Japanese Yen'),
+  ('CNY', 'CN¥', 'Chinese Yuan'),
+  ('MYR', 'RM ', 'Malaysian Ringgit'),
+  ('IDR', 'Rp ', 'Indonesian Rupiah'),
+  ('BDT', '৳', 'Bangladeshi Taka'),
+  ('LKR', 'Rs ', 'Sri Lankan Rupee'),
+  ('NPR', 'Rs ', 'Nepalese Rupee'),
+  ('AFN', 'Af ', 'Afghan Afghani'),
+  ('ZAR', 'R ', 'South African Rand'),
+  ('NGN', '₦', 'Nigerian Naira'),
+  ('EGP', 'E£', 'Egyptian Pound'),
+  ('CHF', 'CHF ', 'Swiss Franc'),
+  ('SEK', 'kr ', 'Swedish Krona'),
+  ('NOK', 'kr ', 'Norwegian Krone'),
+  ('DKK', 'kr ', 'Danish Krone'),
+  ('SGD', r'S$', 'Singapore Dollar'),
+  ('HKD', r'HK$', 'Hong Kong Dollar'),
+  ('KRW', '₩', 'South Korean Won'),
+  ('THB', '฿', 'Thai Baht'),
+  ('PHP', '₱', 'Philippine Peso'),
+  ('VND', '₫', 'Vietnamese Dong'),
+  ('BRL', r'R$', 'Brazilian Real'),
+  ('MXN', r'MX$', 'Mexican Peso'),
+  ('RUB', '₽', 'Russian Ruble'),
 ];
 
 const _lockTimeouts = <(int, String)>[
@@ -86,22 +87,26 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: lead(LucideIcons.palette),
                 title: const Text('Theme'),
-                trailing: DropdownButton<ThemeMode>(
+                trailing: LedgrSelect<ThemeMode>(
+                  label: 'Theme',
+                  compact: true,
                   value: settings.themeMode,
-                  underline: const SizedBox.shrink(),
-                  onChanged: (m) => controller.setThemeMode(m!),
-                  items: const [
-                    DropdownMenuItem(
+                  onChanged: controller.setThemeMode,
+                  options: const [
+                    LedgrSelectOption(
                       value: ThemeMode.system,
-                      child: Text('System'),
+                      label: 'System',
+                      icon: LucideIcons.monitorSmartphone,
                     ),
-                    DropdownMenuItem(
+                    LedgrSelectOption(
                       value: ThemeMode.light,
-                      child: Text('Light'),
+                      label: 'Light',
+                      icon: LucideIcons.sun,
                     ),
-                    DropdownMenuItem(
+                    LedgrSelectOption(
                       value: ThemeMode.dark,
-                      child: Text('Dark'),
+                      label: 'Dark',
+                      icon: LucideIcons.moon,
                     ),
                   ],
                 ),
@@ -129,14 +134,14 @@ class SettingsScreen extends ConsumerWidget {
                 leading: lead(LucideIcons.calendarDays),
                 title: const Text('Month starts on'),
                 subtitle: const Text('For budgets and reports'),
-                trailing: DropdownButton<int>(
+                trailing: LedgrSelect<int>(
+                  label: 'Month starts on',
+                  compact: true,
                   value: settings.monthStartDay,
-                  underline: const SizedBox.shrink(),
-                  menuMaxHeight: 360,
-                  onChanged: (d) => controller.setMonthStartDay(d!),
-                  items: [
+                  onChanged: controller.setMonthStartDay,
+                  options: [
                     for (var day = 1; day <= 28; day++)
-                      DropdownMenuItem(value: day, child: Text('$day')),
+                      LedgrSelectOption(value: day, label: 'Day $day'),
                   ],
                 ),
               ),
@@ -193,13 +198,14 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: lead(LucideIcons.timer),
                   title: const Text('Auto-lock'),
-                  trailing: DropdownButton<int>(
+                  trailing: LedgrSelect<int>(
+                    label: 'Auto-lock',
+                    compact: true,
                     value: settings.lockTimeoutMinutes,
-                    underline: const SizedBox.shrink(),
-                    onChanged: (m) => controller.setLockTimeout(m!),
-                    items: [
+                    onChanged: controller.setLockTimeout,
+                    options: [
                       for (final (minutes, label) in _lockTimeouts)
-                        DropdownMenuItem(value: minutes, child: Text(label)),
+                        LedgrSelectOption(value: minutes, label: label),
                     ],
                   ),
                 ),
@@ -352,32 +358,18 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _pickCurrency(BuildContext context, WidgetRef ref) async {
     final controller = ref.read(settingsControllerProvider.notifier);
     final current = ref.read(appSettingsProvider).homeCurrency;
-    final picked = await showModalBottomSheet<(String, String)>(
+    final picked = await showModalBottomSheet<(String, String, String)>(
       context: context,
       useRootNavigator: true,
-      builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: Gaps.sm),
-          children: [
-            for (final c in _currencies)
-              ListTile(
-                leading: IconBadge(
-                  icon: LucideIcons.coins,
-                  color: Theme.of(sheetContext).colorScheme.primary,
-                  size: 38,
-                  iconSize: 17,
-                ),
-                title: Text('${c.$1}  (${c.$2.trim()})'),
-                trailing: c.$1 == current
-                    ? Icon(
-                        LucideIcons.circleCheck,
-                        color: Theme.of(sheetContext).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () => Navigator.of(sheetContext).pop(c),
-              ),
-          ],
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        // Keep the list above the keyboard while searching.
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+        ),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(sheetContext).height * 0.72,
+          child: _CurrencySheet(current: current),
         ),
       ),
     );
@@ -482,5 +474,110 @@ class SettingsScreen extends ConsumerWidget {
       });
       messenger.showSnackBar(const SnackBar(content: Text('Data cleared')));
     }
+  }
+}
+
+/// Searchable currency list: filters by code, name, or symbol as you type.
+class _CurrencySheet extends StatefulWidget {
+  const _CurrencySheet({required this.current});
+
+  final String current;
+
+  @override
+  State<_CurrencySheet> createState() => _CurrencySheetState();
+}
+
+class _CurrencySheetState extends State<_CurrencySheet> {
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final q = _query.text.trim().toLowerCase();
+    final matches = _currencies
+        .where(
+          (c) =>
+              q.isEmpty ||
+              c.$1.toLowerCase().contains(q) ||
+              c.$3.toLowerCase().contains(q) ||
+              c.$2.trim().toLowerCase() == q,
+        )
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Gaps.xl, 0, Gaps.xl, Gaps.sm),
+          child: Text('Currency', style: text.titleMedium),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Gaps.xl),
+          child: TextField(
+            controller: _query,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Search by code or name',
+              prefixIcon: const Icon(LucideIcons.search, size: 18),
+              suffixIcon: q.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(LucideIcons.x, size: 16),
+                      onPressed: () {
+                        _query.clear();
+                        setState(() {});
+                      },
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(height: Gaps.sm),
+        Expanded(
+          child: matches.isEmpty
+              ? Center(
+                  child: Text(
+                    'No currency matches "$q"',
+                    style: text.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.only(bottom: Gaps.md),
+                  children: [
+                    for (final c in matches)
+                      ListTile(
+                        leading: SizedBox(
+                          width: 44,
+                          child: Text(
+                            c.$2.trim(),
+                            textAlign: TextAlign.center,
+                            style: text.titleSmall?.copyWith(
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ),
+                        title: Text(c.$3),
+                        subtitle: Text(c.$1),
+                        trailing: c.$1 == widget.current
+                            ? Icon(
+                                LucideIcons.circleCheck,
+                                color: scheme.primary,
+                              )
+                            : null,
+                        onTap: () => Navigator.of(context).pop(c),
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
   }
 }

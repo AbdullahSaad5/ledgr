@@ -45,6 +45,100 @@ abstract final class AppIcons {
     'candlestick_chart': LucideIcons.candlestickChart,
     'phone_android': LucideIcons.smartphone,
     'more_horiz': LucideIcons.moreHorizontal,
+    // Extended browse set — food & drink.
+    'coffee': LucideIcons.coffee,
+    'pizza': LucideIcons.pizza,
+    'cake': LucideIcons.cakeSlice,
+    'apple': LucideIcons.apple,
+    'salad': LucideIcons.salad,
+    'soup': LucideIcons.soup,
+    'ice_cream': LucideIcons.iceCreamCone,
+    'cup_soda': LucideIcons.cupSoda,
+    'wine': LucideIcons.wine,
+    'utensils_crossed': LucideIcons.utensilsCrossed,
+    // Transport & travel.
+    'car': LucideIcons.car,
+    'bike': LucideIcons.bike,
+    'train': LucideIcons.trainFront,
+    'ship': LucideIcons.ship,
+    'map': LucideIcons.map,
+    'map_pin': LucideIcons.mapPin,
+    'luggage': LucideIcons.luggage,
+    'tent': LucideIcons.tent,
+    'mountain': LucideIcons.mountain,
+    'palmtree': LucideIcons.palmtree,
+    // Tech & media.
+    'laptop': LucideIcons.laptop,
+    'monitor': LucideIcons.monitor,
+    'headphones': LucideIcons.headphones,
+    'camera': LucideIcons.camera,
+    'music': LucideIcons.music,
+    'film': LucideIcons.film,
+    'gamepad': LucideIcons.gamepad2,
+    'printer': LucideIcons.printer,
+    // Learning & work.
+    'book': LucideIcons.book,
+    'book_open': LucideIcons.bookOpen,
+    'newspaper': LucideIcons.newspaper,
+    'pencil': LucideIcons.pencil,
+    'palette': LucideIcons.palette,
+    'presentation': LucideIcons.presentation,
+    // Style & self.
+    'scissors': LucideIcons.scissors,
+    'shirt': LucideIcons.shirt,
+    'watch': LucideIcons.watch,
+    'gem': LucideIcons.gem,
+    'glasses': LucideIcons.glasses,
+    // Health & fitness.
+    'dumbbell': LucideIcons.dumbbell,
+    'heart_pulse': LucideIcons.heartPulse,
+    'pill': LucideIcons.pill,
+    'stethoscope': LucideIcons.stethoscope,
+    'syringe': LucideIcons.syringe,
+    // Pets & people.
+    'dog': LucideIcons.dog,
+    'cat': LucideIcons.cat,
+    'paw_print': LucideIcons.pawPrint,
+    'users': LucideIcons.users,
+    'user': LucideIcons.user,
+    // Places.
+    'building': LucideIcons.building,
+    'building2': LucideIcons.building2,
+    'factory': LucideIcons.factory,
+    'hotel': LucideIcons.hotel,
+    'church': LucideIcons.church,
+    // Money & numbers.
+    'coins': LucideIcons.coins,
+    'trending_down': LucideIcons.trendingDown,
+    'percent': LucideIcons.percent,
+    'calculator': LucideIcons.calculator,
+    'receipt': LucideIcons.receiptText,
+    'hand_coins': LucideIcons.handCoins,
+    // Tools & home.
+    'hammer': LucideIcons.hammer,
+    'wrench': LucideIcons.wrench,
+    'paint_roller': LucideIcons.paintRoller,
+    'sofa': LucideIcons.sofa,
+    'bed': LucideIcons.bed,
+    'lamp': LucideIcons.lamp,
+    'washing_machine': LucideIcons.washingMachine,
+    // Nature & misc.
+    'leaf': LucideIcons.leaf,
+    'sprout': LucideIcons.sprout,
+    'sun': LucideIcons.sun,
+    'moon': LucideIcons.moon,
+    'cloud': LucideIcons.cloud,
+    'umbrella': LucideIcons.umbrella,
+    'recycle': LucideIcons.recycle,
+    'shield': LucideIcons.shield,
+    'lock': LucideIcons.lock,
+    'key': LucideIcons.key,
+    'phone': LucideIcons.phone,
+    'mail': LucideIcons.mail,
+    'globe': LucideIcons.globe,
+    'star': LucideIcons.star,
+    'sparkles': LucideIcons.sparkles,
+    'party_popper': LucideIcons.partyPopper,
   };
 
   static IconData resolve(String name) => _byName[name] ?? LucideIcons.shapes;
@@ -82,6 +176,12 @@ abstract final class AppIcons {
     'home',
     'more_horiz',
   ];
+
+  /// Every icon offered in the "browse all" picker, grouped roughly by theme.
+  /// Everything in the registry except account-shape icons.
+  static List<String> get allPickerNames => _byName.keys
+      .where((n) => !{'more_horiz', 'candlestick_chart'}.contains(n))
+      .toList();
 
   /// The curated set offered in the category icon picker.
   static const categoryPickerNames = <String>[

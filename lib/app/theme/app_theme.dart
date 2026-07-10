@@ -165,17 +165,47 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(28),
         ),
       ),
+      // Fields read as soft filled surfaces: no idle border, a gentle
+      // primary tint + outline when focused, bold floating label.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainer,
+        fillColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? Color.alphaBlend(
+                  scheme.primary.withValues(alpha: 0.06),
+                  scheme.surfaceContainer,
+                )
+              : scheme.surfaceContainer,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: scheme.primary, width: 1.5),
         ),
+        labelStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: textTheme.labelMedium?.copyWith(
+          color: scheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
+        hintStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+        ),
+        prefixIconColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? scheme.primary
+              : scheme.onSurfaceVariant,
+        ),
+        suffixIconColor: scheme.onSurfaceVariant,
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         borderRadius: BorderRadius.all(Radius.circular(99)),

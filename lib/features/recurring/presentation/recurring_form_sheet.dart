@@ -7,8 +7,10 @@ import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
+import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -151,12 +153,17 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
                   horizontal: Gaps.lg,
                   vertical: Gaps.sm,
                 ),
-                child: DropdownButtonFormField<int>(
-                  initialValue: _accountId,
-                  decoration: const InputDecoration(labelText: 'Account'),
-                  items: [
+                child: LedgrSelect<int?>(
+                  label: 'Account',
+                  value: _accountId,
+                  options: [
                     for (final a in accounts)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                      LedgrSelectOption(
+                        value: a.id,
+                        label: a.name,
+                        icon: AppIcons.resolve(a.icon),
+                        iconColor: Color(a.color),
+                      ),
                   ],
                   onChanged: (v) => setState(() => _accountId = v),
                 ),
@@ -168,15 +175,20 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
                   Gaps.lg,
                   Gaps.lg,
                 ),
-                child: DropdownButtonFormField<int>(
-                  initialValue: _categoryId,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    helperText: 'Optional — keeps reports tidy',
-                  ),
-                  items: [
+                child: LedgrSelect<int?>(
+                  label: 'Category',
+                  value: _categoryId,
+                  options: [
                     for (final c in categories)
-                      DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      LedgrSelectOption(
+                        value: c.id,
+                        // Children read as "Parent > Child" in the flat list.
+                        label: c.parentId == null
+                            ? c.name
+                            : '${_nameOf(categories, c.parentId!)} > ${c.name}',
+                        icon: AppIcons.resolve(c.icon),
+                        iconColor: Color(c.color),
+                      ),
                   ],
                   onChanged: (v) => setState(() => _categoryId = v),
                 ),
@@ -193,14 +205,18 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
                   Gaps.lg,
                   Gaps.sm,
                 ),
-                child: DropdownButtonFormField<Frequency>(
-                  initialValue: _frequency,
-                  decoration: const InputDecoration(labelText: 'Repeats'),
-                  items: [
+                child: LedgrSelect<Frequency>(
+                  label: 'Repeats',
+                  value: _frequency,
+                  options: [
                     for (final f in Frequency.values)
-                      DropdownMenuItem(value: f, child: Text(_freqLabel(f))),
+                      LedgrSelectOption(
+                        value: f,
+                        label: _freqLabel(f),
+                        icon: LucideIcons.repeat,
+                      ),
                   ],
-                  onChanged: (v) => setState(() => _frequency = v!),
+                  onChanged: (v) => setState(() => _frequency = v),
                 ),
               ),
               ListTile(
@@ -334,6 +350,11 @@ class _TypeSelector extends StatelessWidget {
       ),
     );
   }
+}
+
+String _nameOf(List<Category> categories, int id) {
+  final matches = categories.where((c) => c.id == id);
+  return matches.isEmpty ? '?' : matches.first.name;
 }
 
 String _freqLabel(Frequency f) => switch (f) {

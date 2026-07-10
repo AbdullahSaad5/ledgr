@@ -7,8 +7,10 @@ import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
+import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/empty_state.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:ledgr/features/debts/data/debt_repository.dart';
 import 'package:ledgr/features/debts/presentation/debt_form_sheet.dart';
@@ -255,16 +257,22 @@ class _DebtDetailSheetState extends ConsumerState<_DebtDetailSheet> {
               symbol: settings.currencySymbol,
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<int?>(
-              initialValue: _accountId,
-              decoration: const InputDecoration(
-                labelText: 'Account (optional)',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                const DropdownMenuItem(child: Text('Don’t post a transaction')),
+            LedgrSelect<int?>(
+              label: 'Account (optional)',
+              value: _accountId,
+              options: [
+                const LedgrSelectOption(
+                  value: null,
+                  label: 'Don’t post a transaction',
+                  icon: LucideIcons.circleOff,
+                ),
                 for (final a in accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  LedgrSelectOption(
+                    value: a.id,
+                    label: a.name,
+                    icon: AppIcons.resolve(a.icon),
+                    iconColor: Color(a.color),
+                  ),
               ],
               onChanged: (v) => setState(() => _accountId = v),
             ),

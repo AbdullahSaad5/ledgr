@@ -61,24 +61,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(ref.read(appSettingsProvider).themeMode, ThemeMode.system);
-    // Change month-start-day via the dropdown (1–28; scroll the menu to 25).
-    await tester.tap(find.text('1').first);
+    // Change month-start-day via the LedgrSelect sheet (Day 1 → Day 25).
+    await tester.tap(find.text('Day 1'));
     await tester.pumpAndSettle();
     await tester.dragUntilVisible(
-      find.text('25'),
+      find.text('Day 25'),
       find.byType(Scrollable).last,
       const Offset(0, -120),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('25'));
+    await tester.tap(find.text('Day 25'));
     await tester.pumpAndSettle();
     expect(ref.read(appSettingsProvider).monthStartDay, 25);
 
-    // Currency is editable via the picker sheet.
+    // Currency is editable via the searchable picker sheet.
     await tester.scrollUntilVisible(find.text('Currency'), 80);
     await tester.tap(find.text('Currency'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(r'USD  ($)'));
+    await tester.enterText(find.byType(TextField).last, 'us dollar');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('US Dollar'));
     await tester.pumpAndSettle();
     expect(ref.read(appSettingsProvider).homeCurrency, 'USD');
     expect(ref.read(appSettingsProvider).currencySymbol, r'$');
