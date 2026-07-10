@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// The in-body screen header: title (optionally with the Ledgr logo mark) on
 /// the left, `SoftIconButton`-style actions on the right. Screens use this
@@ -42,29 +41,63 @@ class LedgrHeader extends StatelessWidget {
   }
 }
 
-/// The brand mark: a small hero-gradient superellipse with a wallet glyph.
+/// The brand mark (issue #2): deep-teal L with a tonal coin dot on a solid
+/// mint field — identical to the launcher icon. Theme-invariant on purpose,
+/// the way an app icon is.
 class LedgrLogoMark extends StatelessWidget {
   const LedgrLogoMark({this.size = 34, super.key});
 
   final double size;
 
+  static const _mint = Color(0xFF5BD9C8);
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: size,
       height: size,
       decoration: ShapeDecoration(
+        color: _mint,
         shape: RoundedSuperellipseBorder(
           borderRadius: BorderRadius.circular(size / 3),
         ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: scheme.heroGradient,
-        ),
       ),
-      child: Icon(LucideIcons.wallet, size: size * 0.5, color: scheme.onHero),
+      child: CustomPaint(
+        size: Size.square(size),
+        painter: const _MarkPainter(),
+      ),
     );
   }
+}
+
+class _MarkPainter extends CustomPainter {
+  const _MarkPainter();
+
+  static const _ink = Color(0xFF0B3B36);
+  static const _coin = Color(0xFF338A7F);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 96;
+    final stroke = Paint()
+      ..color = _ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 13.5 * u
+      ..strokeCap = StrokeCap.round;
+    final l = Path()
+      ..moveTo(35 * u, 22 * u)
+      ..lineTo(35 * u, 57 * u)
+      ..arcToPoint(
+        Offset(46 * u, 68 * u),
+        radius: Radius.circular(11 * u),
+        clockwise: false,
+      )
+      ..lineTo(70 * u, 68 * u);
+    canvas
+      ..drawPath(l, stroke)
+      ..drawCircle(Offset(53 * u, 48 * u), 7 * u, Paint()..color = _coin);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

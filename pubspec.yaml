@@ -133,21 +133,26 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# Launcher icon (placeholder "L" mark until the visual identity lands,
-# issue #2). Regenerate with: dart run flutter_launcher_icons
+# Launcher icon — the Mint Field mark (issue #2): deep-teal L + tonal coin
+# dot on solid mint. Masters in docs/identity/*.svg.
+# Regenerate with: dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon/icon.png"
-  adaptive_icon_background: "#0B3B36"
+  adaptive_icon_background: "#5BD9C8"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
   adaptive_icon_monochrome: "assets/icon/icon_foreground.png"
 
-# Native splash: brand color only for now; a logo lands with the visual
-# identity (issue #2). Regenerate with: dart run flutter_native_splash:create
+# Native splash: light = deep mark on mint field, dark = mint mark on the
+# deep well. Regenerate with: dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#00696D"
-  color_dark: "#00363A"
+  color: "#5BD9C8"
+  color_dark: "#0B3B36"
+  image: "assets/splash/splash_light.png"
+  image_dark: "assets/splash/splash_dark.png"
   android_12:
-    color: "#00696D"
-    color_dark: "#00363A"
+    color: "#5BD9C8"
+    color_dark: "#0B3B36"
+    image: "assets/splash/splash_light.png"
+    image_dark: "assets/splash/splash_dark.png"
