@@ -213,6 +213,34 @@ void main() {
     await _teardown(tester);
   });
 
+  testWidgets(
+    'category picker shows seeded categories on first open (regression)',
+    (tester) async {
+      // Regression: the sheet used a one-shot ref.read of an unprimed
+      // StreamProvider, so the very first open rendered an empty grid.
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      await _seedAccountsAndTx(db);
+
+      await tester.pumpWidget(_wrap(db, const AddTransactionScreen()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Category'));
+      await tester.pumpAndSettle();
+
+      // Seeded expense categories render in the sheet.
+      expect(find.text('Groceries'), findsOneWidget);
+
+      await tester.tap(find.text('Groceries'));
+      await tester.pumpAndSettle();
+
+      // Selection lands on the tile.
+      expect(find.text('Groceries'), findsOneWidget);
+
+      await _teardown(tester);
+    },
+  );
+
   testWidgets('long-press selects and the selection bar deletes', (
     tester,
   ) async {

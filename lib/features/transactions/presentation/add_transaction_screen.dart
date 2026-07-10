@@ -803,41 +803,56 @@ Future<int?> _pickCategory(
   WidgetRef ref,
   CategoryKind kind,
 ) {
-  final categories =
-      ref.read(categoriesByKindProvider(kind)).valueOrNull ?? const [];
+  // The sheet must watch the provider itself: a one-shot read before the
+  // stream's first emission returns loading and the sheet stays empty forever.
   return showModalBottomSheet<int>(
     context: context,
     useRootNavigator: true,
-    builder: (_) => SafeArea(
-      child: GridView.count(
-        crossAxisCount: 4,
-        shrinkWrap: true,
-        padding: const EdgeInsets.all(12),
-        children: [
-          for (final c in categories)
-            InkWell(
-              onTap: () => Navigator.of(context).pop(c.id),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconBadge(
-                    icon: AppIcons.resolve(c.icon),
-                    color: Color(c.color),
-                    size: 44,
-                    iconSize: 20,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    c.name,
-                    style: Theme.of(context).textTheme.labelSmall,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+    builder: (sheetContext) => SafeArea(
+      child: Consumer(
+        builder: (context, ref, _) {
+          final categoriesAsync = ref.watch(categoriesByKindProvider(kind));
+          return categoriesAsync.when(
+            loading: () => const SizedBox(
+              height: 180,
+              child: Center(child: CircularProgressIndicator()),
             ),
-        ],
+            error: (e, _) => SizedBox(
+              height: 180,
+              child: Center(child: Text('Could not load categories: $e')),
+            ),
+            data: (categories) => GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(12),
+              children: [
+                for (final c in categories)
+                  InkWell(
+                    onTap: () => Navigator.of(context).pop(c.id),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconBadge(
+                          icon: AppIcons.resolve(c.icon),
+                          color: Color(c.color),
+                          size: 44,
+                          iconSize: 20,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          c.name,
+                          style: Theme.of(context).textTheme.labelSmall,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     ),
   );

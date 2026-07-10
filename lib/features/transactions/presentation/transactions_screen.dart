@@ -178,28 +178,44 @@ class _SelectionHeader extends ConsumerWidget {
   }
 
   Future<int?> _pickCategoryForBulk(BuildContext context, WidgetRef ref) {
-    final categories =
-        ref.read(categoriesByKindProvider(CategoryKind.expense)).valueOrNull ??
-        const [];
+    // Watch inside the sheet: a one-shot read before the stream's first
+    // emission returns loading and the sheet stays empty forever.
     return showModalBottomSheet<int>(
       context: context,
       useRootNavigator: true,
-      builder: (_) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            for (final c in categories)
-              ListTile(
-                leading: IconBadge(
-                  icon: AppIcons.resolve(c.icon),
-                  color: Color(c.color),
-                  size: 38,
-                  iconSize: 18,
-                ),
-                title: Text(c.name),
-                onTap: () => Navigator.of(context).pop(c.id),
+      builder: (sheetContext) => SafeArea(
+        child: Consumer(
+          builder: (context, ref, _) {
+            final categoriesAsync = ref.watch(
+              categoriesByKindProvider(CategoryKind.expense),
+            );
+            return categoriesAsync.when(
+              loading: () => const SizedBox(
+                height: 180,
+                child: Center(child: CircularProgressIndicator()),
               ),
-          ],
+              error: (e, _) => SizedBox(
+                height: 180,
+                child: Center(child: Text('Could not load categories: $e')),
+              ),
+              data: (categories) => ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final c in categories)
+                    ListTile(
+                      leading: IconBadge(
+                        icon: AppIcons.resolve(c.icon),
+                        color: Color(c.color),
+                        size: 38,
+                        iconSize: 18,
+                      ),
+                      title: Text(c.name),
+                      onTap: () => Navigator.of(context).pop(c.id),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
