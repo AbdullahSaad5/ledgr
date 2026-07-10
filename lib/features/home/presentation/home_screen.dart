@@ -44,9 +44,13 @@ class HomeScreen extends ConsumerWidget {
     final accountMap = ref.watch(accountMapProvider);
 
     return Scaffold(
-      body: ListView(
-        children:
-            [
+      // SafeArea keeps scrolled content from sliding under the status-bar
+      // clock (Saad hit this on device).
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          children:
+              [
                   LedgrHeader(
                     title: l10n.appName,
                     showLogo: true,
@@ -169,6 +173,7 @@ class HomeScreen extends ConsumerWidget {
                   duration: 280.ms,
                   curve: Curves.easeOutCubic,
                 ),
+        ),
       ),
     );
   }

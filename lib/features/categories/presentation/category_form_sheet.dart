@@ -116,11 +116,13 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
                     ),
                     const SizedBox(width: Gaps.md),
                     Expanded(
+                      // The GroupCard is already titled "Name", so the field
+                      // itself only needs a hint.
                       child: TextField(
                         controller: _name,
                         autofocus: !_isEditing,
                         textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'Name'),
+                        decoration: const InputDecoration(hintText: 'Name'),
                       ),
                     ),
                   ],

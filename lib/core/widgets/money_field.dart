@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ledgr/core/money/money.dart';
+import 'package:ledgr/core/widgets/ledgr_field.dart';
 
 /// A text field for entering a major-unit amount, parsed to minor units.
 /// Used for account opening balances and other non-keypad amount entry.
@@ -29,15 +30,13 @@ class MoneyField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return LedgrField(
       controller: controller,
+      label: label,
+      hint: '0',
+      prefixText: symbol.isEmpty ? null : symbol,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]'))],
-      // No border override: inherits the app-wide filled field style.
-      decoration: InputDecoration(
-        labelText: label,
-        prefixText: symbol.isEmpty ? null : symbol,
-      ),
     );
   }
 }

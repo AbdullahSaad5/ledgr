@@ -10,6 +10,7 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_field.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -104,14 +105,12 @@ class _RecurringFormSheetState extends ConsumerState<RecurringFormSheet> {
                   Gaps.lg,
                   Gaps.sm,
                 ),
-                child: TextField(
+                child: LedgrField(
                   controller: _title,
+                  label: 'Title',
+                  hint: 'Rent, Netflix, salary…',
                   autofocus: true,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'Rent, Netflix, salary…',
-                  ),
                 ),
               ),
               Padding(

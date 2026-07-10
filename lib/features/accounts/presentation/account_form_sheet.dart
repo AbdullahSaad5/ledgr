@@ -10,6 +10,7 @@ import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/color_swatches.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_field.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 
@@ -183,11 +184,13 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
                 padding: const EdgeInsets.all(Gaps.lg),
                 child: Column(
                   children: [
-                    TextField(
+                    LedgrField(
                       controller: _name,
+                      label: 'Name',
+                      hint: 'e.g. Wallet cash, HBL account',
                       autofocus: !_isEditing,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'Name'),
+                      onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: Gaps.md),
                     LedgrSelect<AccountType>(

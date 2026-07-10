@@ -29,7 +29,11 @@ class LedgrHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge,
+              // Kept in lockstep with appBarTheme.titleTextStyle so every
+              // screen's header reads the same size.
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

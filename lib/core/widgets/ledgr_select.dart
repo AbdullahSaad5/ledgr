@@ -53,10 +53,13 @@ class LedgrSelect<T> extends StatelessWidget {
       context: context,
       useRootNavigator: true,
       builder: (sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.only(bottom: Gaps.md),
-          children: [
+        // Floor the height so a one-option sheet doesn't look like a sliver.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 240),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: Gaps.md),
+            children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(Gaps.xl, 0, Gaps.xl, Gaps.sm),
               child: Text(label, style: text.titleMedium),
@@ -84,7 +87,8 @@ class LedgrSelect<T> extends StatelessWidget {
                     : null,
                 onTap: () => Navigator.of(sheetContext).pop((o.value,)),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

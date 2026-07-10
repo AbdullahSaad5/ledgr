@@ -8,6 +8,7 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/group_card.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/ledgr_field.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -89,18 +90,13 @@ class _DebtFormSheetState extends ConsumerState<DebtFormSheet> {
                   Gaps.lg,
                   Gaps.sm,
                 ),
-                child: TextField(
+                child: LedgrField(
                   controller: _person,
+                  label: 'Person',
+                  hint: 'Who is this with?',
+                  prefixIcon: LucideIcons.user,
                   autofocus: true,
                   textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Person',
-                    prefixIcon: Icon(
-                      LucideIcons.user,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
                 ),
               ),
               Padding(

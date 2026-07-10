@@ -92,7 +92,11 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: scheme.surface,
         centerTitle: false,
-        titleTextStyle: textTheme.titleLarge,
+        // Same scale as LedgrHeader so pushed screens don't read smaller
+        // than the tab screens.
+        titleTextStyle: textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -169,6 +173,9 @@ abstract final class AppTheme {
       // primary tint + outline when focused, bold floating label.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        // Labels never float into the border — the notched outline is the
+        // #1 stock-Material tell. LedgrField draws its label above instead.
+        floatingLabelBehavior: FloatingLabelBehavior.never,
         fillColor: WidgetStateColor.resolveWith(
           (states) => states.contains(WidgetState.focused)
               ? Color.alphaBlend(

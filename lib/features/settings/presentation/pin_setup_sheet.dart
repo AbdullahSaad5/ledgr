@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ledgr/core/widgets/ledgr_field.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
 
 /// Set a 4–6 digit PIN (entered twice to confirm). Returns true when saved.
@@ -59,25 +60,26 @@ class _PinSetupSheetState extends ConsumerState<PinSetupSheet> {
         children: [
           Text('Set a PIN', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
-          TextField(
+          LedgrField(
             controller: _first,
+            label: 'PIN',
+            hint: '••••',
             autofocus: true,
             obscureText: true,
             keyboardType: TextInputType.number,
             maxLength: 6,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(labelText: 'PIN'),
           ),
-          TextField(
+          const SizedBox(height: 12),
+          LedgrField(
             controller: _second,
+            label: 'Confirm PIN',
+            hint: '••••',
             obscureText: true,
             keyboardType: TextInputType.number,
             maxLength: 6,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              labelText: 'Confirm PIN',
-              errorText: _error,
-            ),
+            errorText: _error,
           ),
           const SizedBox(height: 16),
           FilledButton(onPressed: _save, child: const Text('Save PIN')),
