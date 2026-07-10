@@ -45,7 +45,7 @@ flutter run                                                # dev device/emulator
 flutter build appbundle --release                          # store flavor
 ```
 
-(Until M0 lands, `flutter create` per PLAN.md §10 M0 — org `com.saad`, project `ledgr`.)
+(Until M0 lands, `flutter create` per PLAN.md §10 M0 — org `com.abdullahsaad5`, project `ledgr`.)
 
 ## Repo layout
 

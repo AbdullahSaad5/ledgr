@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.saad.ledgr"
+    namespace = "com.abdullahsaad5.ledgr"
     // Pinned ahead of flutter.compileSdkVersion: some plugins
     // (flutter_plugin_android_lifecycle) require API 36 to compile against.
     compileSdk = 36
@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.saad.ledgr"
+        applicationId = "com.abdullahsaad5.ledgr"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

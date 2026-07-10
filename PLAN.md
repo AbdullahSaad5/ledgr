@@ -430,7 +430,7 @@ Two tabs Owed to me / I owe, totals header, cards (person, remaining/principal p
 5. **M4 — Recurring + debts (2 days)**: rules CRUD, engine + catch-up + workmanager + notifications, upcoming screen; debts full feature.
 6. **M5 — Security + backup + settings + onboarding (1–2 days)**: PIN/biometric/lock gate/privacy blur; JSON backup/import; settings; onboarding; reconcile.
 7. **M6 — Polish (1–2 days)**: animations, haptics, empty states, dark/large-font audits, app icon + splash.
-8. **M7 — Release (½ day)**: same checklist as CartList (§11 there). App id `com.saad.ledgr` (confirm). Data Safety: "no data collected" (offline). Category: Finance. Note: finance-category apps get extra Play review scrutiny — the "no network permission" fact helps; do NOT use words like "banking" in listing.
+8. **M7 — Release (½ day)**: same checklist as CartList (§11 there). App id `com.abdullahsaad5.ledgr` (confirm). Data Safety: "no data collected" (offline). Category: Finance. Note: finance-category apps get extra Play review scrutiny — the "no network permission" fact helps; do NOT use words like "banking" in listing.
 
 ---
 
