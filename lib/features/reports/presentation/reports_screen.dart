@@ -166,6 +166,10 @@ class _OverviewTab extends ConsumerWidget {
                                       innerRadius: '78%',
                                       radius: '100%',
                                       cornerStyle: CornerStyle.bothCurve,
+                                      // Card-colored stroke separates the
+                                      // segments (Saad's reference look).
+                                      strokeColor: scheme.surfaceContainerLow,
+                                      strokeWidth: 4,
                                       animationDuration: 700,
                                     ),
                                   ],
@@ -174,9 +178,10 @@ class _OverviewTab extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      'Spent',
+                                      'TOTAL SPENT',
                                       style: text.labelSmall?.copyWith(
                                         color: scheme.onSurfaceVariant,
+                                        letterSpacing: 1.2,
                                       ),
                                     ),
                                     AmountText(
@@ -496,6 +501,7 @@ class _MonthBars extends StatelessWidget {
           height: 220,
           child: cartesian(
             context: context,
+            currency: currency,
             tooltip: moneyTooltip(context, formatter, currency),
             series: [
               ColumnSeries<MonthPoint, String>(
@@ -713,7 +719,6 @@ class _DailyRhythm extends ConsumerWidget {
       if (i >= 0 && i < days) perDay[i] += t.amountMinor;
     }
     if (perDay.every((v) => v == 0)) return const SizedBox.shrink();
-    final maxVal = perDay.reduce((a, b) => a > b ? a : b).toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -730,9 +735,13 @@ class _DailyRhythm extends ConsumerWidget {
                 Gaps.md,
               ),
               child: SizedBox(
-                height: 150,
+                height: 180,
+                // A line with real axes (Saad: bars with no scale were
+                // unreadable): compact money labels on the y, "Day N" on
+                // the x, quiet dashed gridlines.
                 child: cartesian(
                   context: context,
+                  currency: currency,
                   tooltip: moneyTooltip(context, formatter, currency),
                   xAxis: NumericAxis(
                     majorGridLines: const MajorGridLines(width: 0),
@@ -740,30 +749,22 @@ class _DailyRhythm extends ConsumerWidget {
                     majorTickLines: const MajorTickLines(size: 0),
                     minimum: 1,
                     maximum: days.toDouble(),
-                    interval: 7,
+                    interval: ((days - 1) / 3).ceilToDouble(),
                     axisLabelFormatter: (args) => ChartAxisLabel(
-                      args.value.toInt().toString(),
+                      'Day ${args.value.toInt()}',
                       text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ),
-                  yAxis: const NumericAxis(isVisible: false),
                   series: [
-                    ColumnSeries<MoneyPoint, num>(
+                    LineSeries<MoneyPoint, num>(
                       dataSource: [
                         for (var i = 0; i < days; i++)
-                          MoneyPoint('${i + 1}', perDay[i]),
+                          MoneyPoint('Day ${i + 1}', perDay[i]),
                       ],
                       xValueMapper: (p, i) => i + 1,
                       yValueMapper: (p, _) => p.minor,
-                      pointColorMapper: (p, _) =>
-                          p.minor == maxVal.toInt() && p.minor > 0
-                          ? scheme.expense
-                          : scheme.primary,
-                      gradient: null,
-                      width: 0.62,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(4),
-                      ),
+                      color: scheme.primary,
+                      width: 3,
                       animationDuration: 600,
                     ),
                   ],

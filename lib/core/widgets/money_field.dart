@@ -33,10 +33,10 @@ class MoneyField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]'))],
+      // No border override: inherits the app-wide filled field style.
       decoration: InputDecoration(
         labelText: label,
         prefixText: symbol.isEmpty ? null : symbol,
-        border: const OutlineInputBorder(),
       ),
     );
   }

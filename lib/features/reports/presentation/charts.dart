@@ -14,6 +14,7 @@ SfCartesianChart cartesian({
   ChartAxis? yAxis,
   TooltipBehavior? tooltip,
   Legend? legend,
+  String currency = 'PKR',
 }) {
   final scheme = Theme.of(context).colorScheme;
   final labelStyle = Theme.of(
@@ -42,8 +43,10 @@ SfCartesianChart cartesian({
             dashArray: const [4, 4],
           ),
           desiredIntervals: 3,
-          axisLabelFormatter: (args) =>
-              ChartAxisLabel(compactMinor(args.value.toInt()), labelStyle),
+          axisLabelFormatter: (args) => ChartAxisLabel(
+            compactMinor(args.value.toInt(), currency),
+            labelStyle,
+          ),
         ),
     tooltipBehavior: tooltip,
     legend: legend ?? const Legend(isVisible: false),
@@ -86,9 +89,14 @@ TooltipBehavior moneyTooltip(
   );
 }
 
-/// Compact axis label for minor units: 150000 minor (Rs 1,500.00) → "1.5K".
-String compactMinor(int minor) {
-  final major = minor / 100;
+/// Compact axis label for minor units, honoring the currency's scale:
+/// PKR (0dp) 1500 minor → "1.5K"; USD (2dp) 150000 minor → "1.5K".
+String compactMinor(int minor, String currency) {
+  var factor = 1;
+  for (var i = 0; i < decimalDigitsFor(currency); i++) {
+    factor *= 10;
+  }
+  final major = minor / factor;
   return NumberFormat.compact().format(major);
 }
 
