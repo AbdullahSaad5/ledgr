@@ -128,10 +128,15 @@ class RecurringRepository {
   /// Live [upcoming] view: re-emits whenever any rule changes (created,
   /// edited, posted — posting advances nextDue), so the screen never needs
   /// a manual reload.
-  Stream<List<UpcomingItem>> watchUpcoming({int days = 30}) => _db
-      .customSelect('SELECT 1', readsFrom: {_db.recurringRules})
-      .watch()
-      .asyncMap((_) => upcoming(DateTime.now(), days: days));
+  /// (tableUpdates, not a marker customSelect — identical marker SQL across
+  /// repositories collides in drift's stream cache; see
+  /// DebtRepository.watchByDirection.)
+  Stream<List<UpcomingItem>> watchUpcoming({int days = 30}) async* {
+    yield await upcoming(DateTime.now(), days: days);
+    yield* _db
+        .tableUpdates(TableUpdateQuery.onAllTables([_db.recurringRules]))
+        .asyncMap((_) => upcoming(DateTime.now(), days: days));
+  }
 
   /// Occurrences due within [days] of [now] across active rules, ascending.
   Future<List<UpcomingItem>> upcoming(DateTime now, {int days = 30}) async {

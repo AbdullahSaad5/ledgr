@@ -162,9 +162,13 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
     final settings = ref.watch(appSettingsProvider);
     // Keep the home-screen widgets current with every balance change (the
     // accounts stream fires on any money-affecting write).
-    ref.listen(activeAccountsProvider, (_, next) {
-      if (next.valueOrNull != null) _syncHomeWidgets();
-    });
+    ref
+      ..listen(activeAccountsProvider, (_, next) {
+        if (next.valueOrNull != null) _syncHomeWidgets();
+      })
+      ..listen(budgetProgressProvider, (_, next) {
+        if (next.valueOrNull != null) _syncHomeWidgets();
+      });
     final seed = Color(settings.seedColor);
     final locked = ref.watch(lockControllerProvider) && settings.lockEnabled;
 

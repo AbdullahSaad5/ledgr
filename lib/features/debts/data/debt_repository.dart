@@ -24,25 +24,33 @@ class DebtRepository {
   final AppDatabase _db;
   final TransactionRepository _tx;
 
-  Stream<List<DebtWithRemaining>> watchByDirection(DebtDirection direction) {
-    return _db
-        .customSelect('SELECT 1', readsFrom: {_db.debts, _db.debtPayments})
-        .watch()
-        .asyncMap((_) async {
-          final debts =
-              await (_db.select(_db.debts)
-                    ..where(
-                      (d) =>
-                          d.direction.equalsValue(direction) &
-                          d.deletedAt.isNull(),
-                    )
-                    ..orderBy([(d) => OrderingTerm(expression: d.settled)]))
-                  .get();
-          return [
-            for (final d in debts)
-              DebtWithRemaining(debt: d, paidMinor: await _paid(d.id)),
-          ];
-        });
+  // tableUpdates, NOT customSelect('SELECT 1'): drift caches stream queries
+  // by SQL text, so identical marker selects with different readsFrom sets
+  // collide and the loser silently stops updating (#17 realtime bug).
+  Stream<List<DebtWithRemaining>> watchByDirection(
+    DebtDirection direction,
+  ) async* {
+    Future<List<DebtWithRemaining>> query() async {
+      final debts =
+          await (_db.select(_db.debts)
+                ..where(
+                  (d) =>
+                      d.direction.equalsValue(direction) & d.deletedAt.isNull(),
+                )
+                ..orderBy([(d) => OrderingTerm(expression: d.settled)]))
+              .get();
+      return [
+        for (final d in debts)
+          DebtWithRemaining(debt: d, paidMinor: await _paid(d.id)),
+      ];
+    }
+
+    yield await query();
+    yield* _db
+        .tableUpdates(
+          TableUpdateQuery.onAllTables([_db.debts, _db.debtPayments]),
+        )
+        .asyncMap((_) => query());
   }
 
   Future<int> _paid(int debtId) async {

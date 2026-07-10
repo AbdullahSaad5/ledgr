@@ -124,24 +124,29 @@ class BudgetRepository {
   }
 
   /// Live progress for every active budget in [period]. Recomputes whenever
-  /// budgets or transactions change.
-  Stream<List<BudgetProgress>> watchProgress(Period period) {
-    return _db
-        .customSelect('SELECT 1', readsFrom: {_db.budgets, _db.transactions})
-        .watch()
-        .asyncMap((_) async {
-          final budgets = await (_db.select(
-            _db.budgets,
-          )..where((b) => b.active.equals(true) & b.deletedAt.isNull())).get();
-          return [
-            for (final b in budgets)
-              BudgetProgress(
-                budget: b,
-                spentMinor: await spentFor(b, period),
-                carryMinor: await carryFor(b, period),
-              ),
-          ];
-        });
+  /// budgets or transactions change. Uses tableUpdates rather than a marker
+  /// customSelect — see DebtRepository.watchByDirection for why.
+  Stream<List<BudgetProgress>> watchProgress(Period period) async* {
+    Future<List<BudgetProgress>> query() async {
+      final budgets = await (_db.select(
+        _db.budgets,
+      )..where((b) => b.active.equals(true) & b.deletedAt.isNull())).get();
+      return [
+        for (final b in budgets)
+          BudgetProgress(
+            budget: b,
+            spentMinor: await spentFor(b, period),
+            carryMinor: await carryFor(b, period),
+          ),
+      ];
+    }
+
+    yield await query();
+    yield* _db
+        .tableUpdates(
+          TableUpdateQuery.onAllTables([_db.budgets, _db.transactions]),
+        )
+        .asyncMap((_) => query());
   }
 
   Future<List<int>> _categoryAndChildren(int categoryId) async {
