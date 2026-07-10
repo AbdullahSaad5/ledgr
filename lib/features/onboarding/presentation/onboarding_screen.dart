@@ -30,6 +30,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   final _cash = TextEditingController();
   final _bank = TextEditingController();
+  final _wallet = TextEditingController();
   int _page = 0;
 
   @override
@@ -37,6 +38,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _controller.dispose();
     _cash.dispose();
     _bank.dispose();
+    _wallet.dispose();
     super.dispose();
   }
 
@@ -62,6 +64,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         color: 0xFF1565C0,
         currency: currency,
         openingBalanceMinor: MoneyField.parse(_bank.text, currency).minor,
+      );
+    }
+    if (_wallet.text.trim().isNotEmpty) {
+      await accounts.create(
+        name: 'Mobile Wallet',
+        type: AccountType.wallet,
+        icon: 'wallet',
+        color: 0xFF8E24AA,
+        currency: currency,
+        openingBalanceMinor: MoneyField.parse(_wallet.text, currency).minor,
       );
     }
     await ref.read(settingsControllerProvider.notifier).setOnboardingComplete();
@@ -107,6 +119,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _AccountsPage(
                     cash: _cash,
                     bank: _bank,
+                    wallet: _wallet,
                     currency: settings.homeCurrency,
                     symbol: settings.currencySymbol,
                   ),
@@ -386,12 +399,14 @@ class _AccountsPage extends StatelessWidget {
   const _AccountsPage({
     required this.cash,
     required this.bank,
+    required this.wallet,
     required this.currency,
     required this.symbol,
   });
 
   final TextEditingController cash;
   final TextEditingController bank;
+  final TextEditingController wallet;
   final String currency;
   final String symbol;
 
@@ -436,6 +451,15 @@ class _AccountsPage extends StatelessWidget {
           controller: bank,
           currency: currency,
           label: 'Bank',
+          symbol: symbol,
+        ),
+        const SizedBox(height: Gaps.md),
+        _AccountField(
+          icon: LucideIcons.smartphone,
+          accent: const Color(0xFF8E24AA),
+          controller: wallet,
+          currency: currency,
+          label: 'Mobile Wallet',
           symbol: symbol,
         ),
       ],

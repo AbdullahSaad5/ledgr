@@ -68,7 +68,7 @@ void main() {
     expect(find.text('Ali'), findsOneWidget);
     final debts = await db.select(db.debts).get();
     expect(debts, hasLength(1));
-    expect(debts.single.principalMinor, 200000);
+    expect(debts.single.principalMinor, 2000); // whole rupees (PKR 0dp)
     // No account chosen → no transaction posted.
     final txs = await db.select(db.transactions).get();
     expect(txs, isEmpty);
@@ -176,7 +176,7 @@ void main() {
 
     final payments = await db.select(db.debtPayments).get();
     expect(payments, hasLength(1));
-    expect(payments.single.amountMinor, 40000);
+    expect(payments.single.amountMinor, 400); // whole rupees (PKR 0dp)
 
     await _teardown(tester);
   });

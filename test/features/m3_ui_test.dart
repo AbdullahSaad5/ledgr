@@ -93,7 +93,7 @@ void main() {
 
     final budgets = await db.select(db.budgets).get();
     expect(budgets, hasLength(1));
-    expect(budgets.single.limitMinor, 500000);
+    expect(budgets.single.limitMinor, 5000); // whole rupees (PKR 0dp)
 
     await _teardown(tester);
   });

@@ -44,7 +44,7 @@ void main() {
 
     final saved = await db.select(db.transactions).get();
     expect(saved, hasLength(1));
-    expect(saved.single.amountMinor, 120000); // 1200.00 in minor units
+    expect(saved.single.amountMinor, 1200); // whole rupees (PKR 0dp)
     expect(saved.single.accountId, accountId);
     expect(saved.single.type, TxType.expense);
 

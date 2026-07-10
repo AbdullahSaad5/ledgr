@@ -129,7 +129,7 @@ void main() {
         ..pressDigit('3')
         ..pressDigit('5')
         ..pressDigit('0');
-      expect(c.toMoney('PKR'), const Money(minor: 155000, currency: 'PKR'));
+      expect(c.toMoney('USD'), const Money(minor: 155000, currency: 'USD'));
     });
 
     test('rounds a repeating result at the currency scale', () {
@@ -139,15 +139,17 @@ void main() {
         ..pressOperator('/')
         ..pressDigit('3');
       // 10/3 = 3.333... -> 333 minor (2dp)
-      expect(c.toMoney('PKR'), const Money(minor: 333, currency: 'PKR'));
+      expect(c.toMoney('USD'), const Money(minor: 333, currency: 'USD'));
+      // PKR is 0dp: 10/3 rounds to 3 whole rupees.
+      expect(c.toMoney('PKR'), const Money(minor: 3, currency: 'PKR'));
     });
 
     test('seeding from an existing amount (edit flow)', () {
       final seeded = KeypadController.fromMoney(
-        const Money(minor: 45000, currency: 'PKR'),
+        const Money(minor: 45000, currency: 'USD'),
       );
       expect(seeded.expression, '450');
-      expect(seeded.toMoney('PKR'), const Money(minor: 45000, currency: 'PKR'));
+      expect(seeded.toMoney('USD'), const Money(minor: 45000, currency: 'USD'));
     });
   });
 }

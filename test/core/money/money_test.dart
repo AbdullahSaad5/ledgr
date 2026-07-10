@@ -72,32 +72,32 @@ void main() {
   group('Money.fromDecimal (parsing) — 2-digit currency', () {
     test('whole and fractional', () {
       expect(
-        Money.fromDecimal(Decimal.parse('1200'), 'PKR'),
-        const Money(minor: 120000, currency: 'PKR'),
+        Money.fromDecimal(Decimal.parse('1200'), 'USD'),
+        const Money(minor: 120000, currency: 'USD'),
       );
       expect(
-        Money.fromDecimal(Decimal.parse('1200.50'), 'PKR'),
-        const Money(minor: 120050, currency: 'PKR'),
+        Money.fromDecimal(Decimal.parse('1200.50'), 'USD'),
+        const Money(minor: 120050, currency: 'USD'),
       );
       expect(
-        Money.fromDecimal(Decimal.parse('0.09'), 'PKR'),
-        const Money(minor: 9, currency: 'PKR'),
+        Money.fromDecimal(Decimal.parse('0.09'), 'USD'),
+        const Money(minor: 9, currency: 'USD'),
       );
     });
 
     test('rounds half-even to the currency scale', () {
       // 1.005 -> banker's rounding at 2dp -> 1.00 (round to even)
-      expect(Money.fromDecimal(Decimal.parse('1.005'), 'PKR').minor, 100);
+      expect(Money.fromDecimal(Decimal.parse('1.005'), 'USD').minor, 100);
       // 1.015 -> 1.02 (round to even)
-      expect(Money.fromDecimal(Decimal.parse('1.015'), 'PKR').minor, 102);
+      expect(Money.fromDecimal(Decimal.parse('1.015'), 'USD').minor, 102);
       // 1.025 -> 1.02 (round to even)
-      expect(Money.fromDecimal(Decimal.parse('1.025'), 'PKR').minor, 102);
+      expect(Money.fromDecimal(Decimal.parse('1.025'), 'USD').minor, 102);
     });
 
     test('negative parses', () {
       expect(
-        Money.fromDecimal(Decimal.parse('-3.20'), 'PKR'),
-        const Money(minor: -320, currency: 'PKR'),
+        Money.fromDecimal(Decimal.parse('-3.20'), 'USD'),
+        const Money(minor: -320, currency: 'USD'),
       );
     });
   });
@@ -111,8 +111,15 @@ void main() {
       expect(const Money(minor: 1200, currency: 'JPY').decimalDigits, 0);
     });
 
-    test('PKR/USD have 2', () {
-      expect(const Money(minor: 0, currency: 'PKR').decimalDigits, 2);
+    test('PKR has 0 decimal digits (whole rupees, locked in #3)', () {
+      expect(const Money(minor: 0, currency: 'PKR').decimalDigits, 0);
+      expect(
+        Money.fromDecimal(Decimal.parse('1200'), 'PKR'),
+        const Money(minor: 1200, currency: 'PKR'),
+      );
+    });
+
+    test('USD has 2', () {
       expect(const Money(minor: 0, currency: 'USD').decimalDigits, 2);
     });
   });
@@ -144,7 +151,7 @@ void main() {
   group('Money.toDecimal', () {
     test('round-trips through minor units', () {
       expect(
-        const Money(minor: 120050, currency: 'PKR').toDecimal(),
+        const Money(minor: 120050, currency: 'USD').toDecimal(),
         Decimal.parse('1200.50'),
       );
       expect(

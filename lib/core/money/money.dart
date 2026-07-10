@@ -130,8 +130,22 @@ class Money implements Comparable<Money> {
 
 /// Minor-unit exponent per ISO 4217. Defaults to 2; only the exceptions the app
 /// realistically encounters are listed. Extend as needed.
+///
+/// PKR is deliberately 0 despite ISO saying 2: nobody tracks paisa, and Saad
+/// locked whole-rupee amounts for the home market (#3). Decided pre-release,
+/// so no stored-amount migration was needed.
 int decimalDigitsFor(String currency) {
-  const zeroDigit = {'JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX', 'PYG', 'RWF'};
+  const zeroDigit = {
+    'PKR',
+    'JPY',
+    'KRW',
+    'VND',
+    'CLP',
+    'ISK',
+    'UGX',
+    'PYG',
+    'RWF',
+  };
   const threeDigit = {'KWD', 'BHD', 'OMR', 'TND', 'JOD', 'IQD', 'LYD'};
   if (zeroDigit.contains(currency)) return 0;
   if (threeDigit.contains(currency)) return 3;
