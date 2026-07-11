@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +12,7 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 import 'package:ledgr/features/attachments/data/attachment_repository.dart';
 import 'package:ledgr/features/transactions/presentation/tx_actions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -81,7 +81,13 @@ class TransactionDetailSheet extends ConsumerWidget {
             : accounts[tx.accountId]?.name ?? 'Account';
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(Gaps.page, 0, Gaps.page, Gaps.xl),
+          padding: EdgeInsets.fromLTRB(
+            Gaps.page,
+            0,
+            Gaps.page,
+            // Clears the system bar so the action row stays tappable.
+            sheetBottomInset(context, min: Gaps.xl),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -123,7 +129,12 @@ class TransactionDetailSheet extends ConsumerWidget {
                           context,
                           LucideIcons.shapes,
                           'Category',
-                          category.name,
+                          // Subcategories read as "Parent > Child" here, the
+                          // one place users double-check a categorization.
+                          category.parentId == null
+                              ? category.name
+                              : '${categories[category.parentId]?.name ?? '?'}'
+                                    ' > ${category.name}',
                         ),
                       _row(
                         context,

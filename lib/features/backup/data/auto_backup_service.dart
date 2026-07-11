@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/features/backup/data/backup_service.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 /// Daily local JSON snapshots (#17): a workmanager task exports the full
@@ -46,12 +47,19 @@ class AutoBackupService {
     return snapshots.length <= keep ? const [] : snapshots.sublist(keep);
   }
 
-  /// The newest snapshot on disk, if any.
+  /// The newest snapshot on disk, if any. Filters to `auto_` files with the
+  /// same rule as [pruneList], so a stray file in the folder is never shared
+  /// as "the latest auto-backup".
   static Future<File?> latest(Directory docs) async {
     final dir = Directory('${docs.path}/backups');
     if (!dir.existsSync()) return null;
-    final files = dir.listSync().whereType<File>().toList()
-      ..sort((a, b) => b.path.compareTo(a.path));
+    final files =
+        dir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.split('/').last.startsWith('auto_'))
+            .toList()
+          ..sort((a, b) => b.path.compareTo(a.path));
     return files.isEmpty ? null : files.first;
   }
 
@@ -72,6 +80,11 @@ class AutoBackupService {
 @pragma('vm:entry-point')
 void autoBackupDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    // Belt and braces: disable() cancels the schedule, but if a stale task
+    // fires anyway it must respect the user's setting.
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('autoBackupEnabled') ?? false)) return true;
+
     final db = AppDatabase();
     try {
       final docs = await getApplicationDocumentsDirectory();

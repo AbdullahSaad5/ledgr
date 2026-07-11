@@ -42,7 +42,12 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(Gaps.page, 0, Gaps.page, Gaps.xxl),
+        padding: EdgeInsets.fromLTRB(
+          Gaps.page,
+          0,
+          Gaps.page,
+          MediaQuery.paddingOf(context).bottom + Gaps.xxl,
+        ),
         children: [
           GroupCard(
             title: 'Appearance',
@@ -347,12 +352,18 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _exportBackup(WidgetRef ref) async {
+  /// Exports and opens the share sheet; reports whether the user actually
+  /// shared the file (dismissing the sheet counts as not shared).
+  Future<bool> _exportBackup(WidgetRef ref) async {
     final json = await ref.read(backupServiceProvider).export();
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/ledgr_backup.json');
     await file.writeAsString(json);
-    await Share.shareXFiles([XFile(file.path)], subject: 'Ledgr backup');
+    final result = await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'Ledgr backup',
+    );
+    return result.status != ShareResultStatus.dismissed;
   }
 
   Future<void> _setAutoBackup(
@@ -483,10 +494,14 @@ class SettingsScreen extends ConsumerWidget {
         await ref
             .read(backupServiceProvider)
             .import(await File(path).readAsString());
+        // Receipt images of the replaced data would otherwise leak on disk.
+        await ref.read(attachmentRepositoryProvider).pruneOrphanFiles();
         messenger.showSnackBar(
           const SnackBar(content: Text('Backup restored')),
         );
-      } on Exception catch (e) {
+        // on Object: malformed-but-valid JSON surfaces as TypeError/RangeError
+        // (Error, not Exception); the transaction has already rolled back.
+      } on Object catch (e) {
         messenger.showSnackBar(
           SnackBar(content: Text('Could not import backup: $e')),
         );
@@ -537,8 +552,11 @@ class SettingsScreen extends ConsumerWidget {
     }
     try {
       await ref.read(backupServiceProvider).import(text.text.trim());
+      // Receipt images of the replaced data would otherwise leak on disk.
+      await ref.read(attachmentRepositoryProvider).pruneOrphanFiles();
       messenger.showSnackBar(const SnackBar(content: Text('Backup restored')));
-    } on Exception catch (e) {
+      // on Object: see the file-import path above.
+    } on Object catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Could not import backup: $e')),
       );
@@ -570,15 +588,27 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (confirmed ?? false) {
-      // Offer a backup first.
-      await _exportBackup(ref);
-      final db = ref.read(databaseProvider);
-      await db.transaction(() async {
-        await db.customStatement('PRAGMA defer_foreign_keys = ON');
-        for (final table in db.allTables) {
-          await db.delete(table).go();
-        }
-      });
+      // Offer a backup first. Dismissing the share sheet reads as a change of
+      // heart, so it aborts the wipe instead of proceeding silently.
+      var backedUp = false;
+      try {
+        backedUp = await _exportBackup(ref);
+      } on Object catch (e) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Backup failed, nothing cleared: $e')),
+        );
+        return;
+      }
+      if (!backedUp) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Clear cancelled — no backup taken')),
+        );
+        return;
+      }
+      // Clears back to fresh-install state: defaults re-seeded, not empty.
+      await ref.read(backupServiceProvider).clearAll();
+      // The wipe dropped the attachment rows; drop their files too.
+      await ref.read(attachmentRepositoryProvider).pruneOrphanFiles();
       messenger.showSnackBar(const SnackBar(content: Text('Data cleared')));
     }
   }

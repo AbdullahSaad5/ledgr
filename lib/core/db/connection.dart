@@ -12,6 +12,12 @@ QueryExecutor openConnection() {
     final dir = await getApplicationDocumentsDirectory();
     final file = File(p.join(dir.path, 'ledgr.sqlite'));
     await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-    return NativeDatabase.createInBackground(file);
+    return NativeDatabase.createInBackground(
+      file,
+      // The auto-backup workmanager isolate opens a second connection while
+      // the app may be writing; without a busy timeout a concurrent write
+      // throws SQLITE_BUSY instead of briefly waiting.
+      setup: (db) => db.execute('PRAGMA busy_timeout = 5000'),
+    );
   });
 }

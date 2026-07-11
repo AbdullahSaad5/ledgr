@@ -27,14 +27,20 @@ class DayHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Gaps.page, Gaps.md, Gaps.page, 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            DateFormat('EEE, d MMM').format(day),
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
+          // Expanded + ellipsis so a large day total at a big font scale
+          // squeezes the date instead of overflowing the row.
+          Expanded(
+            child: Text(
+              DateFormat('EEE, d MMM').format(day),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
+            ),
           ),
+          const SizedBox(width: Gaps.sm),
           AmountText(
             Money(minor: netMinor, currency: currency),
             formatter: formatter,

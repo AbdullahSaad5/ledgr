@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/app/widgets/ledgr_nav_bar.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money.dart';
@@ -108,7 +109,10 @@ class _OverviewTab extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
 
     return ListView(
-      padding: const EdgeInsets.only(top: Gaps.md, bottom: 120),
+      padding: EdgeInsets.only(
+        top: Gaps.md,
+        bottom: LedgrNavBar.clearanceOf(context),
+      ),
       children: [
         totals.when(
           loading: () => const SizedBox(
@@ -356,11 +360,11 @@ class _TrendsTab extends ConsumerWidget {
             .toList();
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             Gaps.page,
             Gaps.md,
             Gaps.page,
-            120,
+            LedgrNavBar.clearanceOf(context),
           ),
           children: [
             if (txs.isEmpty && active.isEmpty)
@@ -608,11 +612,11 @@ class _NetWorthTab extends ConsumerWidget {
         );
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             Gaps.page,
             Gaps.md,
             Gaps.page,
-            120,
+            LedgrNavBar.clearanceOf(context),
           ),
           children: [
             Card(

@@ -79,4 +79,21 @@ void main() {
     expect(await repo.watchForTransaction(txId).first, isEmpty);
     expect(copied.existsSync(), isFalse);
   });
+
+  test('pruneOrphanFiles deletes files without a live row', () async {
+    final source = await fakeImage();
+    await repo.add(txId, sourcePath: source.path);
+    final kept = await repo.fileFor(
+      (await repo.watchForTransaction(txId).first).single,
+    );
+    // Simulate what a replace-all restore leaves behind: a file whose row
+    // is gone.
+    final orphan = File('${docs.path}/receipts/orphan.jpg');
+    await orphan.writeAsBytes([9, 9]);
+
+    await repo.pruneOrphanFiles();
+
+    expect(kept.existsSync(), isTrue);
+    expect(orphan.existsSync(), isFalse);
+  });
 }

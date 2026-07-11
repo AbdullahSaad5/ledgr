@@ -13,6 +13,7 @@ import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/ledgr_select.dart';
 import 'package:ledgr/core/widgets/menu_sheet.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 import 'package:ledgr/features/debts/data/debt_repository.dart';
 import 'package:ledgr/features/debts/presentation/debt_form_sheet.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -80,20 +81,32 @@ class _DebtList extends ConsumerWidget {
               .where((d) => !d.debt.settled)
               .fold(0, (s, d) => s + d.remainingMinor);
           return ListView(
+            // Clears the FAB (and system bar) so the last row stays readable.
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom + 88,
+            ),
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Outstanding',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    AmountText(
-                      Money(minor: outstanding, currency: currency),
-                      formatter: formatter,
-                      style: Theme.of(context).textTheme.titleLarge,
+                    const SizedBox(width: 8),
+                    // FittedBox: big totals at large font scales shrink to
+                    // fit instead of overflowing the header row.
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: AmountText(
+                          Money(minor: outstanding, currency: currency),
+                          formatter: formatter,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -124,9 +137,7 @@ class _DebtList extends ConsumerWidget {
                           await ref
                               .read(debtRepositoryProvider)
                               .delete(d.debt.id);
-                          await ref
-                              .read(debtReminderServiceProvider)
-                              .syncAll();
+                          await ref.read(debtReminderServiceProvider).syncAll();
                         },
                       ),
                     ],
@@ -260,10 +271,13 @@ class _DebtDetailSheetState extends ConsumerState<_DebtDetailSheet> {
     final formatter = ref.watch(moneyFormatterProvider);
     final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
     final debt = widget.debt;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 0, 24, bottomInset + 24),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        0,
+        24,
+        sheetBottomInset(context, min: 24),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -92,6 +92,9 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: scheme.surface,
         centerTitle: false,
+        // Taller than the default 56 so the title clears the status bar
+        // instead of hugging it (matches LedgrHeader's breathing room).
+        toolbarHeight: 72,
         // Same scale as LedgrHeader so pushed screens don't read smaller
         // than the tab screens.
         titleTextStyle: textTheme.headlineSmall?.copyWith(

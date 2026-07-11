@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/app/widgets/ledgr_nav_bar.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
 import 'package:ledgr/core/money/money.dart';
@@ -177,6 +178,22 @@ class _SelectionHeader extends ConsumerWidget {
     );
   }
 
+  /// Parents in position order, each directly followed by its children, so
+  /// the sheet reads as a hierarchy rather than a flat mixed list.
+  static List<Category> _grouped(List<Category> categories) {
+    final childrenOf = <int, List<Category>>{};
+    for (final c in categories) {
+      final p = c.parentId;
+      if (p != null) childrenOf.putIfAbsent(p, () => []).add(c);
+    }
+    return [
+      for (final parent in categories.where((c) => c.parentId == null)) ...[
+        parent,
+        ...childrenOf[parent.id] ?? const <Category>[],
+      ],
+    ];
+  }
+
   Future<int?> _pickCategoryForBulk(BuildContext context, WidgetRef ref) {
     // Watch inside the sheet: a one-shot read before the stream's first
     // emission returns loading and the sheet stays empty forever.
@@ -186,34 +203,61 @@ class _SelectionHeader extends ConsumerWidget {
       builder: (sheetContext) => SafeArea(
         child: Consumer(
           builder: (context, ref, _) {
-            final categoriesAsync = ref.watch(
-              categoriesByKindProvider(CategoryKind.expense),
-            );
-            return categoriesAsync.when(
-              loading: () => const SizedBox(
+            // A selection can mix incomes and expenses, so offer both kinds.
+            final expense =
+                ref
+                    .watch(categoriesByKindProvider(CategoryKind.expense))
+                    .valueOrNull ??
+                const <Category>[];
+            final income =
+                ref
+                    .watch(categoriesByKindProvider(CategoryKind.income))
+                    .valueOrNull ??
+                const <Category>[];
+            if (expense.isEmpty && income.isEmpty) {
+              return const SizedBox(
                 height: 180,
                 child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final byId = {
+              for (final c in [...expense, ...income]) c.id: c,
+            };
+            Widget tile(Category c) => ListTile(
+              contentPadding: EdgeInsets.only(
+                left: c.parentId == null ? 16 : 32,
+                right: 16,
               ),
-              error: (e, _) => SizedBox(
-                height: 180,
-                child: Center(child: Text('Could not load categories: $e')),
+              leading: IconBadge(
+                icon: AppIcons.resolve(c.icon),
+                color: Color(c.color),
+                size: 38,
+                iconSize: 18,
               ),
-              data: (categories) => ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final c in categories)
-                    ListTile(
-                      leading: IconBadge(
-                        icon: AppIcons.resolve(c.icon),
-                        color: Color(c.color),
-                        size: 38,
-                        iconSize: 18,
-                      ),
-                      title: Text(c.name),
-                      onTap: () => Navigator.of(context).pop(c.id),
-                    ),
-                ],
+              title: Text(
+                c.parentId == null
+                    ? c.name
+                    : '${byId[c.parentId]?.name ?? '?'} > ${c.name}',
               ),
+              onTap: () => Navigator.of(context).pop(c.id),
+            );
+            Widget header(String label) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            );
+            return ListView(
+              shrinkWrap: true,
+              children: [
+                if (expense.isNotEmpty) header('Expense'),
+                for (final c in _grouped(expense)) tile(c),
+                if (income.isNotEmpty) header('Income'),
+                for (final c in _grouped(income)) tile(c),
+              ],
             );
           },
         ),
@@ -335,7 +379,9 @@ class _TransactionList extends ConsumerWidget {
               ),
             ],
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 120)),
+        SliverToBoxAdapter(
+          child: SizedBox(height: LedgrNavBar.clearanceOf(context)),
+        ),
       ],
     );
   }

@@ -64,6 +64,10 @@ class _CategoryList extends ConsumerWidget {
             if (p != null) childrenOf.putIfAbsent(p, () => []).add(c);
           }
           return ListView(
+            // Clears the FAB (and system bar) so the last row stays readable.
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom + 88,
+            ),
             children: [
               for (final parent in parents) ...[
                 _categoryTile(context, ref, parent, categories),
@@ -95,7 +99,6 @@ class _CategoryList extends ConsumerWidget {
                     ),
                   ),
               ],
-              const SizedBox(height: 80),
             ],
           );
         },
@@ -214,16 +217,46 @@ class _CategoryList extends ConsumerWidget {
     final count = await repo.transactionCount(category.id);
     if (!context.mounted) return;
 
+    final childCount = siblings.where((c) => c.parentId == category.id).length;
+
     if (count == 0) {
-      await repo.mergeAndDelete(category.id);
+      // Nothing to merge, but deleting is still destructive enough for a
+      // confirmation — especially for a parent whose children get promoted.
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Delete ${category.name}?'),
+          content: Text(
+            childCount == 0
+                ? 'No transactions use this category.'
+                : 'Its $childCount subcategor${childCount == 1 ? 'y' : 'ies'} '
+                      'will become top-level categories.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed ?? false) await repo.mergeAndDelete(category.id);
       return;
     }
 
     final others = siblings.where((c) => c.id != category.id).toList();
     final target = await showDialog<int>(
       context: context,
-      builder: (_) =>
-          _MergeDialog(count: count, category: category, options: others),
+      builder: (_) => _MergeDialog(
+        count: count,
+        category: category,
+        options: others,
+        childCount: childCount,
+      ),
     );
     if (target != null) {
       await repo.mergeAndDelete(category.id, toId: target);
@@ -236,34 +269,60 @@ class _MergeDialog extends StatelessWidget {
     required this.count,
     required this.category,
     required this.options,
+    required this.childCount,
   });
 
   final int count;
   final Category category;
   final List<Category> options;
+  final int childCount;
 
   @override
   Widget build(BuildContext context) {
+    // Include the category being deleted: its own children appear as merge
+    // targets and still label with its name.
+    final byId = {for (final c in options) c.id: c, category.id: category};
+    // Children read as "Parent > Child" so two same-named children under
+    // different parents stay distinguishable.
+    String label(Category c) => c.parentId == null
+        ? c.name
+        : '${byId[c.parentId]?.name ?? '?'} > ${c.name}';
+
     return AlertDialog(
       title: Text('Delete ${category.name}?'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$count transaction(s) use this category. Move them to:'),
+          Text(
+            '$count transaction(s) use this category'
+            '${childCount > 0 ? ' or its subcategories' : ''}. '
+            '${childCount > 0 ? 'Subcategories become top-level. ' : ''}'
+            'Move the transactions to:',
+          ),
           const SizedBox(height: 8),
-          for (final c in options)
-            ListTile(
-              dense: true,
-              leading: IconBadge(
-                icon: AppIcons.resolve(c.icon),
-                color: Color(c.color),
-                size: 34,
-                iconSize: 16,
+          // Scrolls: the full category list is taller than small screens.
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final c in options)
+                    ListTile(
+                      dense: true,
+                      leading: IconBadge(
+                        icon: AppIcons.resolve(c.icon),
+                        color: Color(c.color),
+                        size: 34,
+                        iconSize: 16,
+                      ),
+                      title: Text(label(c)),
+                      onTap: () => Navigator.of(context).pop(c.id),
+                    ),
+                ],
               ),
-              title: Text(c.name),
-              onTap: () => Navigator.of(context).pop(c.id),
             ),
+          ),
         ],
       ),
       actions: [

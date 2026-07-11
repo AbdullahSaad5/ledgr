@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgr/core/db/database.dart';
@@ -152,6 +153,104 @@ void main() {
         expect(reloaded!.parentId, isNull);
       },
     );
+
+    test(
+      'reassigns recurring rules and tombstones budgets on the source',
+      () async {
+        final accounts = AccountRepository(db);
+        final acc = await accounts.create(
+          name: 'A',
+          type: AccountType.cash,
+          icon: 'payments',
+          color: 0xFF000000,
+          currency: 'PKR',
+        );
+        final from = await repo.create(
+          name: 'From',
+          kind: CategoryKind.expense,
+          icon: 'category',
+          color: 0xFF000000,
+        );
+        final to = await repo.create(
+          name: 'To',
+          kind: CategoryKind.expense,
+          icon: 'category',
+          color: 0xFF000000,
+        );
+        final rule = await db
+            .into(db.recurringRules)
+            .insert(
+              RecurringRulesCompanion.insert(
+                title: 'Netflix',
+                type: TxType.expense,
+                amountMinor: 1500,
+                currency: 'PKR',
+                accountId: acc,
+                frequency: Frequency.monthly,
+                nextDue: DateTime(2026, 8, 1),
+                categoryId: Value(from),
+              ),
+            );
+        final budget = await db
+            .into(db.budgets)
+            .insert(
+              BudgetsCompanion.insert(
+                categoryId: Value(from),
+                limitMinor: 10000,
+              ),
+            );
+
+        await repo.mergeAndDelete(from, toId: to);
+
+        final reloadedRule = await (db.select(
+          db.recurringRules,
+        )..where((r) => r.id.equals(rule))).getSingle();
+        expect(reloadedRule.categoryId, to);
+
+        final reloadedBudget = await (db.select(
+          db.budgets,
+        )..where((b) => b.id.equals(budget))).getSingle();
+        expect(reloadedBudget.deletedAt, isNotNull);
+      },
+    );
+
+    test('transactionCount includes spend on children', () async {
+      final accounts = AccountRepository(db);
+      final tx = TransactionRepository(db);
+      final acc = await accounts.create(
+        name: 'A',
+        type: AccountType.cash,
+        icon: 'payments',
+        color: 0xFF000000,
+        currency: 'PKR',
+      );
+      final parent = await repo.create(
+        name: 'Bills',
+        kind: CategoryKind.expense,
+        icon: 'receipt_long',
+        color: 0xFF000000,
+      );
+      final child = await repo.create(
+        name: 'Electricity',
+        kind: CategoryKind.expense,
+        icon: 'bolt',
+        color: 0xFF000000,
+        parentId: parent,
+      );
+      await tx.create(
+        TransactionDraft(
+          type: TxType.expense,
+          amountMinor: 500,
+          currency: 'PKR',
+          accountId: acc,
+          categoryId: child,
+          date: DateTime(2026, 7, 1),
+        ),
+      );
+      // Deleting the parent reshapes where the child's spend lives, so the
+      // prompt must count it.
+      expect(await repo.transactionCount(parent), 1);
+    });
 
     test('detaches children when no target is given', () async {
       final parent = await repo.create(

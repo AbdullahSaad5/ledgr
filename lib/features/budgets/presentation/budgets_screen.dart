@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/app/widgets/ledgr_nav_bar.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -30,18 +31,17 @@ class BudgetsScreen extends ConsumerWidget {
     final currency = ref.watch(appSettingsProvider).homeCurrency;
 
     // The empty state carries its own Add-budget CTA, so the FAB only shows
-    // once budgets exist; extra bottom padding clears the floating nav pill.
+    // once budgets exist. No manual lift: with extendBody the Scaffold's
+    // bottom MediaQuery padding already spans the floating bar + system
+    // inset, and the FAB is positioned above it.
     final hasBudgets = (progressAsync.valueOrNull ?? const []).isNotEmpty;
 
     return Scaffold(
       floatingActionButton: hasBudgets
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 96),
-              child: FloatingActionButton.extended(
-                onPressed: () => BudgetFormSheet.show(context),
-                icon: const Icon(LucideIcons.plus),
-                label: const Text('Budget'),
-              ),
+          ? FloatingActionButton.extended(
+              onPressed: () => BudgetFormSheet.show(context),
+              icon: const Icon(LucideIcons.plus),
+              label: const Text('Budget'),
             )
           : null,
       body: SafeArea(
@@ -75,11 +75,12 @@ class BudgetsScreen extends ConsumerWidget {
                   }
                   items.sort((a, b) => b.fraction.compareTo(a.fraction));
                   return ListView(
-                    padding: const EdgeInsets.fromLTRB(
+                    // Extra 72 clears the FAB stacked above the nav pill.
+                    padding: EdgeInsets.fromLTRB(
                       Gaps.page,
                       Gaps.xs,
                       Gaps.page,
-                      120,
+                      LedgrNavBar.clearanceOf(context) + 72,
                     ),
                     children: [
                       for (final p in items) ...[
@@ -263,15 +264,27 @@ class _BudgetTile extends StatelessWidget {
                 ),
                 const SizedBox(height: Gaps.sm),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    AmountText(
-                      Money(minor: progress.spentMinor, currency: currency),
-                      formatter: formatter,
-                      style: text.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+                    // Flexible: seven-digit amounts at large font scales
+                    // squeeze instead of overflowing the tile footer.
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: AmountText(
+                          Money(
+                            minor: progress.spentMinor,
+                            currency: currency,
+                          ),
+                          formatter: formatter,
+                          style: text.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
+                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       'of $limitLabel',
                       style: text.bodySmall?.copyWith(

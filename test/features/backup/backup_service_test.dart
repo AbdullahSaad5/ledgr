@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ledgr/core/db/database.dart';
@@ -61,6 +63,40 @@ void main() {
     expect(await db.select(db.categories).get(), hasLength(30));
   });
 
+  test('clearAll wipes user data but re-seeds default categories', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final accounts = AccountRepository(db);
+    final tx = TransactionRepository(db);
+    final cash = await accounts.create(
+      name: 'Cash',
+      type: AccountType.cash,
+      icon: 'payments',
+      color: 0xFF00696D,
+      currency: 'PKR',
+    );
+    await tx.create(
+      TransactionDraft(
+        type: TxType.expense,
+        amountMinor: 500,
+        currency: 'PKR',
+        accountId: cash,
+        categoryId: 1,
+        date: DateTime(2026, 7, 10),
+      ),
+    );
+
+    await BackupService(db).clearAll();
+
+    expect(await db.select(db.accounts).get(), isEmpty);
+    expect(await db.select(db.transactions).get(), isEmpty);
+    // Fresh-install category set is back, including Bills subcategories.
+    final categories = await db.select(db.categories).get();
+    expect(categories, hasLength(30));
+    expect(categories.where((c) => c.parentId != null), hasLength(5));
+  });
+
   test('rejects an unknown version', () async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
@@ -68,5 +104,26 @@ void main() {
       () => BackupService(db).import('{"version": 99, "tables": {}}'),
       throwsA(isA<FormatException>()),
     );
+  });
+
+  test('rejects a backup with a missing table before wiping', () async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final backup = BackupService(db);
+
+    // Valid version, no tables section.
+    expect(
+      () => backup.import('{"version": 1}'),
+      throwsA(isA<FormatException>()),
+    );
+    // Valid envelope with a table key removed.
+    final json = jsonDecode(await backup.export()) as Map<String, dynamic>;
+    (json['tables'] as Map).remove('debts');
+    expect(
+      () => backup.import(jsonEncode(json)),
+      throwsA(isA<FormatException>()),
+    );
+    // The failed imports never wiped the seeded categories.
+    expect(await db.select(db.categories).get(), hasLength(30));
   });
 }

@@ -13,6 +13,7 @@ import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 import 'package:ledgr/features/transactions/domain/transaction_draft.dart';
 import 'package:ledgr/features/transactions/presentation/widgets/calc_keypad.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -324,8 +325,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                      // Wrap, not Row: on small screens with large system
+                      // fonts the pills (four of them on transfers) flow to
+                      // a second line instead of overflowing sideways.
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           _MetaPill(
                             icon: LucideIcons.store,
@@ -335,7 +341,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             active: _payee.text.trim().isNotEmpty,
                             onTap: _editPayee,
                           ),
-                          const SizedBox(width: 8),
                           _MetaPill(
                             icon: LucideIcons.tag,
                             label: _tagIds.isEmpty
@@ -344,16 +349,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             active: _tagIds.isNotEmpty,
                             onTap: _editTags,
                           ),
-                          if (_type == TxType.transfer) ...[
-                            const SizedBox(width: 8),
+                          if (_type == TxType.transfer)
                             _MetaPill(
                               icon: LucideIcons.receipt,
                               label: _feeMinor > 0 ? 'Fee added' : 'Fee',
                               active: _feeMinor > 0,
                               onTap: _editFee,
                             ),
-                          ],
-                          const SizedBox(width: 8),
                           _MetaPill(
                             icon: LucideIcons.imagePlus,
                             label: _stagedReceipts.isEmpty
@@ -621,10 +623,16 @@ class _SelectorTile extends StatelessWidget {
                 children: [
                   Icon(icon, size: 13, color: scheme.onSurfaceVariant),
                   const SizedBox(width: 5),
-                  Text(
-                    label,
-                    style: text.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                  // Flexible: "Category" at a big font scale truncates
+                  // instead of overflowing the narrow tile.
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -680,11 +688,17 @@ class _MetaPill extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
+              // A long payee name truncates instead of pushing the pill
+              // wider than the screen.
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -729,7 +743,7 @@ class _PayeeSheetState extends ConsumerState<_PayeeSheet> {
         24,
         0,
         24,
-        MediaQuery.viewInsetsOf(context).bottom + 24,
+        sheetBottomInset(context, min: 24),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -814,7 +828,7 @@ class _TagsSheetState extends ConsumerState<_TagsSheet> {
         24,
         0,
         24,
-        MediaQuery.viewInsetsOf(context).bottom + 24,
+        sheetBottomInset(context, min: 24),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1065,7 +1079,7 @@ class _FeeSheetState extends State<_FeeSheet> {
         Gaps.page,
         Gaps.lg,
         Gaps.page,
-        MediaQuery.viewInsetsOf(context).bottom + Gaps.lg,
+        sheetBottomInset(context),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1084,9 +1098,9 @@ class _FeeSheetState extends State<_FeeSheet> {
             width: double.infinity,
             height: 48,
             child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(
-                MoneyField.parse(_controller.text, widget.currency).minor,
-              ),
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(MoneyField.parse(_controller.text, widget.currency).minor),
               child: const Text('Save fee'),
             ),
           ),

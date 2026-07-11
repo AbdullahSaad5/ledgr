@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:ledgr/core/db/database.dart';
+import 'package:ledgr/core/db/seed.dart';
 
 /// Full local backup: exports every table to a versioned JSON envelope and
 /// restores from it (replace-all). Uuids are included so a restore-then-sync
@@ -29,13 +30,49 @@ class BackupService {
     return jsonEncode({'version': version, 'tables': tables});
   }
 
+  /// Wipes every table, then re-seeds the default categories so the app is
+  /// back to its fresh-install state rather than an empty shell.
+  Future<void> clearAll() async {
+    await _db.transaction(() async {
+      await _db.customStatement('PRAGMA defer_foreign_keys = ON');
+      for (final table in _db.allTables) {
+        await _db.delete(table).go();
+      }
+      await seedDefaults(_db);
+    });
+  }
+
+  static const _tableKeys = [
+    'accounts',
+    'categories',
+    'transactions',
+    'tags',
+    'transactionTags',
+    'attachments',
+    'budgets',
+    'recurringRules',
+    'debts',
+    'debtPayments',
+  ];
+
   Future<void> import(String jsonStr) async {
     final data = jsonDecode(jsonStr) as Map<String, dynamic>;
     final fileVersion = data['version'] as int?;
     if (fileVersion != version) {
       throw FormatException('Unsupported backup version: $fileVersion');
     }
-    final t = (data['tables'] as Map).cast<String, dynamic>();
+    final tables = data['tables'];
+    if (tables is! Map) {
+      throw const FormatException('Backup has no "tables" section');
+    }
+    final t = tables.cast<String, dynamic>();
+    // Every table must be present: import wipes everything first, so a
+    // missing key would silently leave that table empty.
+    for (final key in _tableKeys) {
+      if (t[key] is! List) {
+        throw FormatException('Backup is missing table "$key"');
+      }
+    }
 
     await _db.transaction(() async {
       // Defer FK checks so insertion order and self-references don't matter.

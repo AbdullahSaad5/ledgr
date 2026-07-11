@@ -91,25 +91,31 @@ class CategoryRepository {
     });
   }
 
-  /// How many non-deleted transactions reference [categoryId] (for the
-  /// merge-on-delete prompt).
+  /// How many non-deleted transactions reference [categoryId] or one of its
+  /// children (for the merge-on-delete prompt). Children count because
+  /// deleting a parent reshapes where their spend appears.
   Future<int> transactionCount(int categoryId) async {
+    final children = await (_db.select(
+      _db.categories,
+    )..where((c) => c.parentId.equals(categoryId))).get();
+    final ids = [categoryId, ...children.map((c) => c.id)];
     final count = _db.transactions.id.count();
     final row =
         await (_db.selectOnly(_db.transactions)
               ..addColumns([count])
               ..where(
-                _db.transactions.categoryId.equals(categoryId) &
+                _db.transactions.categoryId.isIn(ids) &
                     _db.transactions.deletedAt.isNull(),
               ))
             .getSingle();
     return row.read(count) ?? 0;
   }
 
-  /// Delete [fromId] by reassigning its transactions to [toId], promoting its
-  /// children to top-level, then tombstoning it. Children never follow the
-  /// merge target (which could itself be a child — nesting is one level). One
-  /// transaction so the move and the delete are atomic.
+  /// Delete [fromId] by reassigning its transactions and recurring rules to
+  /// [toId], promoting its children to top-level, tombstoning any budget on
+  /// it, then tombstoning it. Children never follow the merge target (which
+  /// could itself be a child — nesting is one level). One transaction so the
+  /// move and the delete are atomic.
   Future<void> mergeAndDelete(int fromId, {int? toId}) {
     return _db.transaction(() async {
       final now = DateTime.now();
@@ -120,6 +126,20 @@ class CategoryRepository {
           TransactionsCompanion(categoryId: Value(toId), updatedAt: Value(now)),
         );
       }
+      // Recurring rules keep posting after the delete, so they must not keep
+      // pointing at a tombstoned category. No merge target = uncategorized.
+      await (_db.update(
+        _db.recurringRules,
+      )..where((r) => r.categoryId.equals(fromId))).write(
+        RecurringRulesCompanion(categoryId: Value(toId), updatedAt: Value(now)),
+      );
+      // A budget on the deleted category can never receive spend again;
+      // tombstone it rather than leave a nameless frozen row.
+      await (_db.update(
+        _db.budgets,
+      )..where((b) => b.categoryId.equals(fromId))).write(
+        BudgetsCompanion(deletedAt: Value(now), updatedAt: Value(now)),
+      );
       await (_db.update(
         _db.categories,
       )..where((c) => c.parentId.equals(fromId))).write(

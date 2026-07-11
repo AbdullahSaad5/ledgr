@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/core/widgets/ledgr_field.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 import 'package:ledgr/features/security/presentation/lock_controller.dart';
 
 /// Set a 4–6 digit PIN (entered twice to confirm). Returns true when saved.
@@ -51,9 +52,13 @@ class _PinSetupSheetState extends ConsumerState<PinSetupSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, bottomInset + 24),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        24,
+        24,
+        sheetBottomInset(context, min: 24),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

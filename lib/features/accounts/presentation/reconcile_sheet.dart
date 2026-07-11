@@ -6,6 +6,7 @@ import 'package:ledgr/core/providers/repository_providers.dart';
 import 'package:ledgr/core/settings/settings_provider.dart';
 import 'package:ledgr/core/widgets/amount_text.dart';
 import 'package:ledgr/core/widgets/money_field.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 
 /// Reconcile an account: enter the real balance; the app posts an adjustment
 /// for the difference (ADR-0003).
@@ -64,10 +65,13 @@ class _ReconcileSheetState extends ConsumerState<ReconcileSheet> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final formatter = ref.watch(moneyFormatterProvider);
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomInset + 16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        sheetBottomInset(context, min: 16),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

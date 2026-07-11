@@ -48,6 +48,10 @@ class RecurringScreen extends ConsumerWidget {
             );
           }
           return ListView(
+            // Clears the FAB (and system bar) so the last row stays readable.
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom + 88,
+            ),
             children: [
               for (final r in rules)
                 ListTile(

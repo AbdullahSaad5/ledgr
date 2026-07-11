@@ -273,10 +273,14 @@ void main() {
     await tester.pumpWidget(_wrap(db, const CategoriesScreen()));
     await tester.pumpAndSettle();
 
-    // First category's overflow menu → Delete (no transactions use it).
+    // First category's overflow menu → Delete (no transactions use it),
+    // then confirm in the dialog.
     await tester.tap(find.byIcon(LucideIcons.moreVertical).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('No transactions use this category.'), findsOneWidget);
+    await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle();
 
     final active =

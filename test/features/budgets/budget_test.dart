@@ -116,6 +116,38 @@ void main() {
       expect(await repo.spentFor(budget, july), 25000);
     });
 
+    test('covers matches own category, its children, and overall', () async {
+      final categories = CategoryRepository(db);
+      final bills = await categories.create(
+        name: 'Bills',
+        kind: CategoryKind.expense,
+        icon: 'receipt_long',
+        color: 0xFF000000,
+      );
+      final electricity = await categories.create(
+        name: 'Electricity',
+        kind: CategoryKind.expense,
+        icon: 'bolt',
+        color: 0xFF000000,
+        parentId: bills,
+      );
+      final billsBudget = await repo.create(
+        categoryId: bills,
+        limitMinor: 100000,
+      );
+      final overall = await repo.create(limitMinor: 100000);
+      final rows = {
+        for (final b in await db.select(db.budgets).get()) b.id: b,
+      };
+
+      expect(await repo.covers(rows[billsBudget]!, bills), isTrue);
+      expect(await repo.covers(rows[billsBudget]!, electricity), isTrue);
+      expect(await repo.covers(rows[billsBudget]!, 1), isFalse);
+      expect(await repo.covers(rows[billsBudget]!, null), isFalse);
+      expect(await repo.covers(rows[overall]!, electricity), isTrue);
+      expect(await repo.covers(rows[overall]!, null), isTrue);
+    });
+
     group('rollover (#17)', () {
       Future<void> expenseOn(int amount, DateTime date) => tx.create(
         TransactionDraft(

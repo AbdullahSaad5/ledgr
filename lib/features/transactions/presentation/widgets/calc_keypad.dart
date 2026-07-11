@@ -137,6 +137,11 @@ class _KeypadButtonState extends State<_KeypadButton> {
                   ),
                   _KeyKind.digit => Text(
                     key.label,
+                    // The keypad's height is clamped, so its digits cap their
+                    // scale instead of outgrowing the fixed rows.
+                    textScaler: MediaQuery.textScalerOf(
+                      context,
+                    ).clamp(maxScaleFactor: 1.3),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: scheme.onSurface,
                     ),

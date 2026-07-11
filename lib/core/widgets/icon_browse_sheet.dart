@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/widgets/app_icons.dart';
 import 'package:ledgr/core/widgets/icon_badge.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Full icon catalog with search, for category/account customization (#16
@@ -25,11 +26,10 @@ class IconBrowseSheet extends StatefulWidget {
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
-      builder: (_) => Padding(
-        // Keep the grid above the keyboard while searching.
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(context).bottom,
-        ),
+      builder: (sheetContext) => Padding(
+        // Keeps the grid above the keyboard while searching, and above the
+        // system bar (3-button nav) when the keyboard is down.
+        padding: EdgeInsets.only(bottom: sheetBottomInset(sheetContext)),
         child: SizedBox(
           height: MediaQuery.sizeOf(context).height * 0.72,
           child: IconBrowseSheet(selected: selected, accent: accent),

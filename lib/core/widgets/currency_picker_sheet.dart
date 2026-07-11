@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/widgets/sheet_insets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Every currency Ledgr offers: (code, symbol, display name).
@@ -60,10 +61,9 @@ class CurrencyPickerSheet extends StatefulWidget {
       useRootNavigator: true,
       isScrollControlled: true,
       builder: (sheetContext) => Padding(
-        // Keep the list above the keyboard while searching.
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-        ),
+        // Keeps the list above the keyboard while searching, and above the
+        // system bar (3-button nav) when the keyboard is down.
+        padding: EdgeInsets.only(bottom: sheetBottomInset(sheetContext)),
         child: SizedBox(
           height: MediaQuery.sizeOf(sheetContext).height * 0.72,
           child: CurrencyPickerSheet(current: current),
@@ -144,12 +144,17 @@ class _CurrencyPickerSheetState extends State<CurrencyPickerSheet> {
                     for (final c in matches)
                       ListTile(
                         leading: SizedBox(
-                          width: 44,
-                          child: Text(
-                            c.$2.trim(),
-                            textAlign: TextAlign.center,
-                            style: text.titleSmall?.copyWith(
-                              color: scheme.primary,
+                          width: 52,
+                          // Wide symbols ("CHF", "AED") shrink to fit rather
+                          // than clip at large font scales.
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              c.$2.trim(),
+                              textAlign: TextAlign.center,
+                              style: text.titleSmall?.copyWith(
+                                color: scheme.primary,
+                              ),
                             ),
                           ),
                         ),

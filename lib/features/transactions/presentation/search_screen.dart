@@ -88,13 +88,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('${results.length} transactions'),
-                    AmountText(
-                      Money(minor: total, currency: currency),
-                      formatter: formatter,
-                      tone: AmountTone.auto,
+                    const SizedBox(width: 8),
+                    // FittedBox: big totals at large font scales shrink to
+                    // fit instead of overflowing the summary row.
+                    Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: AmountText(
+                          Money(minor: total, currency: currency),
+                          formatter: formatter,
+                          tone: AmountTone.auto,
+                        ),
+                      ),
                     ),
                   ],
                 ),

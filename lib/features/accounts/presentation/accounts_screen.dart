@@ -58,25 +58,37 @@ class AccountsScreen extends ConsumerWidget {
           }
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(
+            // Clears the FAB (and system bar) so the last row stays readable.
+            padding: EdgeInsets.fromLTRB(
               Gaps.page,
               Gaps.xs,
               Gaps.page,
-              96,
+              MediaQuery.paddingOf(context).bottom + 88,
             ),
             children: [
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(Gaps.lg),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Net worth', style: text.titleSmall),
-                      AmountText(
-                        Money(minor: netWorth, currency: settings.homeCurrency),
-                        formatter: formatter,
-                        tone: AmountTone.auto,
-                        style: text.titleLarge,
+                      const SizedBox(width: Gaps.sm),
+                      // FittedBox: a long amount at a big font scale shrinks
+                      // to fit instead of overflowing the card.
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: AmountText(
+                            Money(
+                              minor: netWorth,
+                              currency: settings.homeCurrency,
+                            ),
+                            formatter: formatter,
+                            tone: AmountTone.auto,
+                            style: text.titleLarge,
+                          ),
+                        ),
                       ),
                     ],
                   ),

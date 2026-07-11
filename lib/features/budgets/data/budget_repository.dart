@@ -83,6 +83,18 @@ class BudgetRepository {
     );
   }
 
+  /// Whether [budget] counts spend on [categoryId]: an overall budget counts
+  /// everything, a category budget counts its own category and its children.
+  Future<bool> covers(Budget budget, int? categoryId) async {
+    if (budget.categoryId == null) return true;
+    if (categoryId == null) return false;
+    if (budget.categoryId == categoryId) return true;
+    final row = await (_db.select(
+      _db.categories,
+    )..where((c) => c.id.equals(categoryId))).getSingleOrNull();
+    return row?.parentId == budget.categoryId;
+  }
+
   /// Expense spent against [budget] within [period]. A category budget includes
   /// spend on that category and its subcategories; an overall budget counts all
   /// expense.

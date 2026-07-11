@@ -54,6 +54,24 @@ class AttachmentRepository {
     return File('${docs.path}/${attachment.path}');
   }
 
+  /// Deletes receipt files no live attachment row references. Replace-all
+  /// restore and clear-data drop rows without touching the copied images,
+  /// which would otherwise leak disk forever.
+  Future<void> pruneOrphanFiles() async {
+    final docs = await _docsDir();
+    final receipts = Directory('${docs.path}/receipts');
+    if (!receipts.existsSync()) return;
+
+    final live = await (_db.select(
+      _db.attachments,
+    )..where((a) => a.deletedAt.isNull())).get();
+    final keep = live.map((a) => '${docs.path}/${a.path}').toSet();
+
+    for (final entry in receipts.listSync().whereType<File>()) {
+      if (!keep.contains(entry.path)) await entry.delete();
+    }
+  }
+
   /// Tombstones the row (sync-ready, ADR-0005) and deletes the copied file.
   Future<void> remove(int id) async {
     final row = await (_db.select(

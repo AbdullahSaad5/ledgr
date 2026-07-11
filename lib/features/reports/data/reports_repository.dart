@@ -54,7 +54,10 @@ class ReportsRepository {
               ..groupBy([catId]))
             .get();
 
-    // Map child -> parent for roll-up.
+    // Map child -> parent for roll-up. Tombstoned categories stay in the map
+    // on purpose: residual spend on a deleted child (shouldn't happen now
+    // that mergeAndDelete reassigns everything, but old data may hold some)
+    // still rolls up to its live parent instead of becoming a phantom row.
     final categories = await _db.select(_db.categories).get();
     final parentOf = {for (final c in categories) c.id: c.parentId};
 

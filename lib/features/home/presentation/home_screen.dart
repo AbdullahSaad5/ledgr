@@ -162,7 +162,9 @@ class HomeScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                  const SizedBox(height: 120),
+                  // No trailing spacer: this ListView has no explicit
+                  // padding, so it auto-applies the ambient bottom inset the
+                  // shell reports for the floating bar (extendBody).
                 ]
                 // Gentle staggered entrance for the dashboard sections.
                 .animate(interval: 40.ms)
@@ -388,38 +390,45 @@ class _HeroBudgetRead extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Spent ',
-                    style: text.labelMedium?.copyWith(
-                      color: scheme.onHeroMuted,
+            // Flexible + ellipsis: big system fonts with real amounts would
+            // otherwise overflow the hero card.
+            Flexible(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Spent ',
+                      style: text.labelMedium?.copyWith(
+                        color: scheme.onHeroMuted,
+                      ),
                     ),
-                  ),
-                  TextSpan(
-                    text: formatter.format(
-                      Money(minor: spentMinor, currency: currency),
+                    TextSpan(
+                      text: formatter.format(
+                        Money(minor: spentMinor, currency: currency),
+                      ),
+                      style: text.labelLarge?.copyWith(
+                        color: scheme.onHero,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                    style: text.labelLarge?.copyWith(
-                      color: scheme.onHero,
-                      fontWeight: FontWeight.w800,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                    TextSpan(
+                      text: ' of $limitLabel',
+                      style: text.labelMedium?.copyWith(
+                        color: scheme.onHeroMuted,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                  TextSpan(
-                    text: ' of $limitLabel',
-                    style: text.labelMedium?.copyWith(
-                      color: scheme.onHeroMuted,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: Gaps.sm),
+            const Spacer(),
             Text(
               '${(fraction * 100).round()}%',
               style: text.labelMedium?.copyWith(color: scheme.onHeroMuted),
@@ -677,12 +686,19 @@ class _BudgetRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                name,
-                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              // Long category names truncate rather than overflow the row.
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
+              const SizedBox(width: Gaps.sm),
               Text(
                 over ? '$amountLabel over' : '$amountLabel left',
                 style: text.bodySmall?.copyWith(

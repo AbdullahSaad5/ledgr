@@ -20,16 +20,16 @@ class BudgetAlertService {
     if (amountMinor <= 0) return;
     final budgets = await _budgets.watchActive().first;
     for (final budget in budgets) {
-      // A category budget only reacts to its own category (or a child).
-      if (budget.categoryId != null && budget.categoryId != categoryId) {
-        continue;
-      }
+      // A category budget only reacts to its own category or a child of it.
+      if (!await _budgets.covers(budget, categoryId)) continue;
       final after = await _budgets.spentFor(budget, period);
       final before = after - amountMinor;
+      // Rollover budgets alert against their effective (carried) limit.
+      final carry = await _budgets.carryFor(budget, period);
       final crossing = crossedThreshold(
         beforeMinor: before,
         afterMinor: after,
-        limitMinor: budget.limitMinor,
+        limitMinor: budget.limitMinor + carry,
       );
       if (crossing == BudgetThreshold.none) continue;
       final pct = crossing == BudgetThreshold.hundred ? 100 : 80;

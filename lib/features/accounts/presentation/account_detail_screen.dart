@@ -156,7 +156,10 @@ class AccountDetailScreen extends ConsumerWidget {
                       );
                     }
                     return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: Gaps.xxl),
+                      padding: EdgeInsets.only(
+                        bottom:
+                            MediaQuery.paddingOf(context).bottom + Gaps.xxl,
+                      ),
                       itemCount: history.length,
                       itemBuilder: (context, i) {
                         final tx = history[i];

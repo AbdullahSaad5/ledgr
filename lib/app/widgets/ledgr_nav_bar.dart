@@ -27,6 +27,16 @@ class LedgrNavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onFab;
 
+  /// Bottom clearance a tab screen's scroll view needs so its last item can
+  /// scroll clear of the floating bar. The shell uses extendBody, so the
+  /// Scaffold already reports the bar's full height (system inset included)
+  /// as the body's bottom MediaQuery padding — but an explicit `padding:` on
+  /// a scroll view discards that ambient inset, so screens must add it back
+  /// via this helper instead of a fixed spacer (which is short by the system
+  /// inset on 3-button navigation).
+  static double clearanceOf(BuildContext context) =>
+      MediaQuery.paddingOf(context).bottom + Gaps.lg;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
