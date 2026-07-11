@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -196,20 +197,37 @@ class _LedgrAppState extends ConsumerState<LedgrApp>
           ],
           supportedLocales: AppL10n.supportedLocales,
           builder: (context, child) {
-            return Stack(
-              children: [
-                child ?? const SizedBox.shrink(),
-                // Gate screens run in their own Navigator so their text fields,
-                // dropdowns, and sheets have an Overlay in scope.
-                if (!settings.onboardingComplete)
-                  _gate(const OnboardingScreen()),
-                if (locked) _gate(const LockScreen()),
-                if (_obscured && !locked)
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: const ColoredBox(color: Colors.black26),
-                  ),
-              ],
+            final brightness = Theme.of(context).brightness;
+            // Edge-to-edge: themed surface behind the system nav bar
+            // instead of the unthemed white strip (Saad, tokri too).
+            return AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: Colors.transparent,
+                systemNavigationBarContrastEnforced: false,
+                systemNavigationBarIconBrightness:
+                    brightness == Brightness.dark
+                        ? Brightness.light
+                        : Brightness.dark,
+                statusBarIconBrightness: brightness == Brightness.dark
+                    ? Brightness.light
+                    : Brightness.dark,
+              ),
+              child: Stack(
+                children: [
+                  child ?? const SizedBox.shrink(),
+                  // Gate screens run in their own Navigator so their text
+                  // fields, dropdowns, and sheets have an Overlay in scope.
+                  if (!settings.onboardingComplete)
+                    _gate(const OnboardingScreen()),
+                  if (locked) _gate(const LockScreen()),
+                  if (_obscured && !locked)
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: const ColoredBox(color: Colors.black26),
+                    ),
+                ],
+              ),
             );
           },
         );

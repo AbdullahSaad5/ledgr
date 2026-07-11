@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/app/app.dart';
@@ -19,6 +20,9 @@ Future<void> main() async {
       // Not supported on this device — 60Hz is fine.
     }
   }
+  // Edge-to-edge: the system nav bar area shows the app's own surface
+  // instead of an unthemed white strip (Saad, seen in tokri too).
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   final prefs = await SharedPreferences.getInstance();
   final container = ProviderContainer(
     overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
