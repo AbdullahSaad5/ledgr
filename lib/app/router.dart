@@ -42,10 +42,46 @@ enum AppRoute {
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
+/// Tokri fires `ledgr://tx/new?...` (ledgr#18), which Uri-parses with host
+/// "tx" and path "/new" — a location go_router has no route for. Rewrite it
+/// to the canonical `/tx/new` path, keeping the query. Returns null for
+/// anything else (including the widget's path-form `ledgr:///tx/new`).
+Uri? normalizeDeepLink(Uri uri) {
+  if (uri.host != 'tx' || uri.path != '/new') return null;
+  return Uri(
+    path: AppRoute.addTransaction.path,
+    queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
+  );
+}
+
+/// What an external deep link may prefill on the add-transaction form
+/// (ledgr#18). The link's `amountMinor` speaks hundredths of a rupee
+/// (Tokri's convention); conversion to this ledger's minor units happens
+/// at keypad-seeding time. Prefill never auto-saves.
+@immutable
+class TxPrefill {
+  const TxPrefill({this.amountHundredths, this.payee, this.note});
+
+  /// Known keys only; unknown params are ignored, junk amounts dropped.
+  factory TxPrefill.fromQuery(Map<String, String> query) {
+    final amount = int.tryParse(query['amountMinor'] ?? '');
+    return TxPrefill(
+      amountHundredths: amount != null && amount > 0 ? amount : null,
+      payee: query['payee'],
+      note: query['note'],
+    );
+  }
+
+  final int? amountHundredths;
+  final String? payee;
+  final String? note;
+}
+
 GoRouter createRouter() {
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: AppRoute.home.path,
+    redirect: (context, state) => normalizeDeepLink(state.uri)?.toString(),
     routes: [
       StatefulShellRoute(
         builder: (context, state, shell) => NavShell(navigationShell: shell),
@@ -147,9 +183,13 @@ GoRouter createRouter() {
         path: AppRoute.addTransaction.path,
         name: AppRoute.addTransaction.name,
         parentNavigatorKey: _rootKey,
-        pageBuilder: (context, state) => const MaterialPage(
+        pageBuilder: (context, state) => MaterialPage(
           fullscreenDialog: true,
-          child: AddTransactionScreen(),
+          child: AddTransactionScreen(
+            prefill: state.uri.queryParameters.isEmpty
+                ? null
+                : TxPrefill.fromQuery(state.uri.queryParameters),
+          ),
         ),
       ),
       GoRoute(

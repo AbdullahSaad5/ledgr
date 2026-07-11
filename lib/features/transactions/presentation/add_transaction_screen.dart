@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:ledgr/app/router.dart' show TxPrefill;
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/db/enums.dart';
@@ -21,9 +22,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// Add or edit a transaction (PLAN.md §6.3). The 5-second path: amount on the
 /// keypad, pick a type/account/category, save.
 class AddTransactionScreen extends ConsumerStatefulWidget {
-  const AddTransactionScreen({this.transactionId, super.key});
+  const AddTransactionScreen({this.transactionId, this.prefill, super.key});
 
   final int? transactionId;
+
+  /// Deep-link prefill (ledgr#18, Tokri trip handoff): fills the form only,
+  /// the user still confirms Save.
+  final TxPrefill? prefill;
 
   @override
   ConsumerState<AddTransactionScreen> createState() =>
@@ -55,6 +60,21 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   void initState() {
     super.initState();
     if (_isEditing) _loadTags();
+    final prefill = widget.prefill;
+    if (prefill != null && !_isEditing) {
+      final hundredths = prefill.amountHundredths;
+      if (hundredths != null) {
+        // The link speaks hundredths of a rupee; the keypad speaks decimal
+        // rupees. 45000 → "450", 45050 → "450.5".
+        final whole = hundredths ~/ 100;
+        final cents = hundredths % 100;
+        _keypad.expression = cents == 0
+            ? '$whole'
+            : (hundredths / 100).toString();
+      }
+      _payee.text = prefill.payee ?? '';
+      _note.text = prefill.note ?? '';
+    }
   }
 
   @override
