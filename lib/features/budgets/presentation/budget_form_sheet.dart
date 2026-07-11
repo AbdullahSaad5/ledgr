@@ -82,19 +82,78 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// Two-step scope pick for a parent with children, mirroring the
+  /// add-transaction picker: budget the whole parent (children included) or
+  /// one subcategory.
+  Future<int?> _pickScope(
+    BuildContext context,
+    Category parent,
+    List<Category> children,
+  ) {
+    return showModalBottomSheet<int>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => SafeArea(
+        // Scrolls: a parent can have enough children to outgrow the sheet's
+        // height budget on short screens.
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: IconBadge(
+                  icon: AppIcons.resolve(parent.icon),
+                  color: Color(parent.color),
+                  size: 38,
+                  iconSize: 18,
+                ),
+                title: Text('All of ${parent.name}'),
+                subtitle: const Text('Includes its subcategories'),
+                onTap: () => Navigator.of(sheetContext).pop(parent.id),
+              ),
+              for (final c in children)
+                ListTile(
+                  contentPadding: const EdgeInsetsDirectional.only(
+                    start: 32,
+                    end: 16,
+                  ),
+                  leading: IconBadge(
+                    icon: AppIcons.resolve(c.icon),
+                    color: Color(c.color),
+                    size: 34,
+                    iconSize: 16,
+                  ),
+                  title: Text(c.name),
+                  onTap: () => Navigator.of(sheetContext).pop(c.id),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
-    // Budgets attach to top-level categories only; a parent budget already
-    // counts subcategory spend (#16), so listing children here would create
-    // confusing double-cover.
-    final categories =
-        (ref
-                    .watch(categoriesByKindProvider(CategoryKind.expense))
-                    .valueOrNull ??
-                const <Category>[])
-            .where((c) => c.parentId == null)
-            .toList();
+    final all =
+        ref.watch(categoriesByKindProvider(CategoryKind.expense)).valueOrNull ??
+        const <Category>[];
+    // The grid shows parents; a parent with children opens a scope sheet
+    // (whole parent or one subcategory).
+    final categories = all.where((c) => c.parentId == null).toList();
+    final childrenOf = <int, List<Category>>{};
+    for (final c in all) {
+      final p = c.parentId;
+      if (p != null) childrenOf.putIfAbsent(p, () => []).add(c);
+    }
+    final byId = {for (final c in all) c.id: c};
+    final selected = _categoryId == null ? null : byId[_categoryId];
+    // A subcategory selection lights up its parent's grid cell and swaps the
+    // cell's caption to the child's name.
+    final selectedCellId = selected == null
+        ? null
+        : (selected.parentId ?? selected.id);
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -139,7 +198,17 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                       for (final c in categories)
                         InkWell(
                           borderRadius: BorderRadius.circular(14),
-                          onTap: () => setState(() => _categoryId = c.id),
+                          onTap: () async {
+                            final kids = childrenOf[c.id] ?? const <Category>[];
+                            if (kids.isEmpty) {
+                              setState(() => _categoryId = c.id);
+                              return;
+                            }
+                            final picked = await _pickScope(context, c, kids);
+                            if (picked != null) {
+                              setState(() => _categoryId = picked);
+                            }
+                          },
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -153,7 +222,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                                     decoration: ShapeDecoration(
                                       shape: RoundedSuperellipseBorder(
                                         borderRadius: BorderRadius.circular(16),
-                                        side: _categoryId == c.id
+                                        side: selectedCellId == c.id
                                             ? BorderSide(
                                                 color: Color(c.color),
                                                 width: 2,
@@ -161,7 +230,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                                             : BorderSide.none,
                                       ),
                                     ),
-                                    child: _categoryId == c.id
+                                    child: selectedCellId == c.id
                                         ? IconBadge.filled(
                                             icon: AppIcons.resolve(c.icon),
                                             fill: Color(c.color),
@@ -176,7 +245,7 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                                             iconSize: 18,
                                           ),
                                   ),
-                                  if (_categoryId == c.id)
+                                  if (selectedCellId == c.id)
                                     Positioned(
                                       right: -4,
                                       top: -4,
@@ -202,12 +271,14 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                c.name,
+                                selected?.parentId == c.id
+                                    ? selected!.name
+                                    : c.name,
                                 style: text.labelSmall?.copyWith(
-                                  fontWeight: _categoryId == c.id
+                                  fontWeight: selectedCellId == c.id
                                       ? FontWeight.w800
                                       : FontWeight.w500,
-                                  color: _categoryId == c.id
+                                  color: selectedCellId == c.id
                                       ? scheme.onSurface
                                       : scheme.onSurfaceVariant,
                                 ),

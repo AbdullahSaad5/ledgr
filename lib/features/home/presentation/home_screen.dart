@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
+import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -643,7 +644,12 @@ class _BudgetsSnapshot extends ConsumerWidget {
                   for (final p in scoped.take(3))
                     _BudgetRow(
                       progress: p,
-                      name: categories[p.budget.categoryId]?.name ?? 'Budget',
+                      name: p.isOverall
+                          ? 'Overall'
+                          : _categoryPath(
+                              categories,
+                              categories[p.budget.categoryId],
+                            ),
                       formatter: formatter,
                       currency: currency,
                     ),
@@ -767,3 +773,10 @@ class _AddAccountCard extends StatelessWidget {
     );
   }
 }
+
+/// "Parent > Child" for a subcategory, plain name otherwise.
+String _categoryPath(Map<int, Category> categories, Category? c) => c == null
+    ? 'Category'
+    : c.parentId == null
+    ? c.name
+    : "${categories[c.parentId]?.name ?? '?'} > ${c.name}";

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ledgr/app/theme/app_theme.dart';
 import 'package:ledgr/app/widgets/ledgr_nav_bar.dart';
+import 'package:ledgr/core/db/database.dart';
 import 'package:ledgr/core/money/money.dart';
 import 'package:ledgr/core/money/money_formatter.dart';
 import 'package:ledgr/core/providers/repository_providers.dart';
@@ -31,17 +32,22 @@ class BudgetsScreen extends ConsumerWidget {
     final currency = ref.watch(appSettingsProvider).homeCurrency;
 
     // The empty state carries its own Add-budget CTA, so the FAB only shows
-    // once budgets exist. No manual lift: with extendBody the Scaffold's
-    // bottom MediaQuery padding already spans the floating bar + system
-    // inset, and the FAB is positioned above it.
+    // once budgets exist. Lifted by the ambient bottom padding (floating bar
+    // + system inset under extendBody): the Scaffold does not raise the FAB
+    // itself — verified on-device, it rests behind the pill otherwise.
     final hasBudgets = (progressAsync.valueOrNull ?? const []).isNotEmpty;
 
     return Scaffold(
       floatingActionButton: hasBudgets
-          ? FloatingActionButton.extended(
-              onPressed: () => BudgetFormSheet.show(context),
-              icon: const Icon(LucideIcons.plus),
-              label: const Text('Budget'),
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: () => BudgetFormSheet.show(context),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('Budget'),
+              ),
             )
           : null,
       body: SafeArea(
@@ -90,8 +96,10 @@ class BudgetsScreen extends ConsumerWidget {
                           currency: currency,
                           categoryName: p.isOverall
                               ? 'Overall'
-                              : categories[p.budget.categoryId]?.name ??
-                                    'Category',
+                              : _categoryPath(
+                                  categories,
+                                  categories[p.budget.categoryId],
+                                ),
                           icon: p.isOverall
                               ? LucideIcons.wallet
                               : AppIcons.resolve(
@@ -301,3 +309,10 @@ class _BudgetTile extends StatelessWidget {
     );
   }
 }
+
+/// "Parent > Child" for a subcategory, plain name otherwise.
+String _categoryPath(Map<int, Category> categories, Category? c) => c == null
+    ? 'Category'
+    : c.parentId == null
+    ? c.name
+    : "${categories[c.parentId]?.name ?? '?'} > ${c.name}";

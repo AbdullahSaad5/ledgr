@@ -72,6 +72,119 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('budget form creates a subcategory budget via scope sheet', (
+    tester,
+  ) async {
+    await tester.pumpWidget(wrap(const BudgetFormSheet()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Category'));
+    await tester.pumpAndSettle();
+    // Bills & Utilities has seeded children, so tapping it opens the scope
+    // sheet instead of selecting directly. The cell sits on the grid's
+    // second row, outside its 260px viewport: drag the whole row into view
+    // first so the tap lands on the cell's center.
+    await tester.drag(find.byType(GridView), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bills & Utilities').first);
+    await tester.pumpAndSettle();
+    expect(find.text('All of Bills & Utilities'), findsOneWidget);
+    await tester.tap(find.text('Electricity'));
+    await tester.pumpAndSettle();
+    // The parent's cell now captions the picked child.
+    expect(find.text('Electricity'), findsOneWidget);
+
+    // The Limit card can be lazily unbuilt below the fold; bring it in.
+    await tester.scrollUntilVisible(
+      find.text('Monthly limit'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '3000');
+    await tester.ensureVisible(find.text('Create budget'));
+    await tester.tap(find.text('Create budget'));
+    await tester.pumpAndSettle();
+
+    final budgets = await db.select(db.budgets).get();
+    final electricity = await (db.select(db.categories)
+          ..where((c) => c.name.equals('Electricity')))
+        .getSingle();
+    expect(budgets.single.categoryId, electricity.id);
+    expect(budgets.single.limitMinor, 3000);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('scope sheet "All of parent" budgets the whole parent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(wrap(const BudgetFormSheet()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Category'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(GridView), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bills & Utilities').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All of Bills & Utilities'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Monthly limit'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '9000');
+    await tester.ensureVisible(find.text('Create budget'));
+    await tester.tap(find.text('Create budget'));
+    await tester.pumpAndSettle();
+
+    final budgets = await db.select(db.budgets).get();
+    final bills =
+        await (db.select(db.categories)
+              ..where((c) => c.name.equals('Bills & Utilities'))
+              ..where((c) => c.parentId.isNull()))
+            .getSingle();
+    expect(budgets.single.categoryId, bills.id);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('budget form edits limit and rollover in place', (
+    tester,
+  ) async {
+    final id = await db
+        .into(db.budgets)
+        .insert(BudgetsCompanion.insert(limitMinor: 5000));
+    final budget = await (db.select(
+      db.budgets,
+    )..where((b) => b.id.equals(id))).getSingle();
+
+    await tester.pumpWidget(wrap(BudgetFormSheet(budget: budget)));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit budget'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, '8000');
+    await tester.tap(find.text('Roll over leftovers'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final updated = await (db.select(
+      db.budgets,
+    )..where((b) => b.id.equals(id))).getSingle();
+    expect(updated.limitMinor, 8000);
+    expect(updated.rollover, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('budget form creates a rollover category budget', (
     tester,
   ) async {

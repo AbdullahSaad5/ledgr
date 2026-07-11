@@ -116,6 +116,45 @@ void main() {
       expect(await repo.spentFor(budget, july), 25000);
     });
 
+    test('subcategory budget counts only its own spend', () async {
+      final categories = CategoryRepository(db);
+      final bills = await categories.create(
+        name: 'Bills',
+        kind: CategoryKind.expense,
+        icon: 'receipt_long',
+        color: 0xFF000000,
+      );
+      final electricity = await categories.create(
+        name: 'Electricity',
+        kind: CategoryKind.expense,
+        icon: 'bolt',
+        color: 0xFF000000,
+        parentId: bills,
+      );
+      final gas = await categories.create(
+        name: 'Gas',
+        kind: CategoryKind.expense,
+        icon: 'flame',
+        color: 0xFF000000,
+        parentId: bills,
+      );
+      final id = await repo.create(
+        categoryId: electricity,
+        limitMinor: 50000,
+      );
+      await expense(20000, electricity);
+      await expense(9999, gas); // sibling: excluded
+      await expense(5000, bills); // parent direct spend: excluded
+      final budget = await (db.select(
+        db.budgets,
+      )..where((b) => b.id.equals(id))).getSingle();
+      expect(await repo.spentFor(budget, july), 20000);
+      // And it only reacts to its own category's expenses.
+      expect(await repo.covers(budget, electricity), isTrue);
+      expect(await repo.covers(budget, gas), isFalse);
+      expect(await repo.covers(budget, bills), isFalse);
+    });
+
     test('covers matches own category, its children, and overall', () async {
       final categories = CategoryRepository(db);
       final bills = await categories.create(
